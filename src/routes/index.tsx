@@ -38,6 +38,12 @@ function App() {
 	const [batterySize, setBatterySize] = useState<number>(5);
 	const [electricityPrice, setElectricityPrice] = useState<number>(0.25);
 	const [capacityKW, setCapacityKW] = useState<number>(10);
+	const [batteryCostPerKWh, setBatteryCostPerKWh] = useState<number>(
+		ESO_PRICES.BATTERY_COST_PER_KWH,
+	);
+	const [batteryRecupYears, setBatteryRecupYears] = useState<number>(
+		ESO_PRICES.BATTERY_RECUP_YEARS,
+	);
 
 	const [monthlyInputs, setMonthlyInputs] = useState<MonthlyInput[]>(
 		DEFAULT_MONTHLY_INPUTS,
@@ -55,6 +61,10 @@ function App() {
 					setElectricityPrice(parsed.electricityPrice);
 				if (typeof parsed.capacityKW === "number")
 					setCapacityKW(parsed.capacityKW);
+				if (typeof parsed.batteryCostPerKWh === "number")
+					setBatteryCostPerKWh(parsed.batteryCostPerKWh);
+				if (typeof parsed.batteryRecupYears === "number")
+					setBatteryRecupYears(parsed.batteryRecupYears);
 				if (Array.isArray(parsed.monthlyInputs))
 					setMonthlyInputs(parsed.monthlyInputs);
 			} catch (e) {
@@ -73,11 +83,21 @@ function App() {
 					batterySize,
 					electricityPrice,
 					capacityKW,
+					batteryCostPerKWh,
+					batteryRecupYears,
 					monthlyInputs,
 				}),
 			);
 		}
-	}, [batterySize, electricityPrice, capacityKW, monthlyInputs, isLoaded]);
+	}, [
+		batterySize,
+		electricityPrice,
+		capacityKW,
+		monthlyInputs,
+		isLoaded,
+		batteryCostPerKWh,
+		batteryRecupYears,
+	]);
 
 	const results = useMemo(() => {
 		return evaluatePlans(
@@ -94,8 +114,15 @@ function App() {
 			electricityPrice,
 			capacityKW,
 			batterySize,
+			batteryCostPerKWh,
 		);
-	}, [monthlyInputs, electricityPrice, capacityKW, batterySize]);
+	}, [
+		monthlyInputs,
+		electricityPrice,
+		capacityKW,
+		batterySize,
+		batteryCostPerKWh,
+	]);
 
 	const updateMonthlyInput = (
 		index: number,
@@ -161,23 +188,6 @@ function App() {
 							<div className="space-y-4">
 								<div>
 									<label className="block text-sm font-medium text-slate-600 mb-1">
-										Battery Size (kWh)
-									</label>
-									<div className="relative">
-										<Battery className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-										<input
-											type="number"
-											value={batterySize}
-											onChange={(e) =>
-												setBatterySize(parseFloat(e.target.value) || 0)
-											}
-											className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all"
-										/>
-									</div>
-								</div>
-
-								<div>
-									<label className="block text-sm font-medium text-slate-600 mb-1">
 										Electricity Price (€/kWh)
 									</label>
 									<div className="relative">
@@ -207,6 +217,80 @@ function App() {
 												setCapacityKW(parseFloat(e.target.value) || 0)
 											}
 											className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all"
+										/>
+									</div>
+								</div>
+							</div>
+						</section>
+
+						<section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+							<div className="flex items-center justify-between mb-6">
+								<div className="flex items-center gap-2">
+									<Battery className="w-5 h-5 text-blue-500" />
+									<h2 className="font-semibold text-lg">Battery Settings</h2>
+								</div>
+								{batterySize > 0 && (
+									<button
+										type="button"
+										onClick={() => setBatterySize(0)}
+										className="text-xs font-medium text-red-500 hover:text-red-600 transition-colors"
+									>
+										Remove
+									</button>
+								)}
+							</div>
+
+							<div className="space-y-6">
+								<div>
+									<div className="flex justify-between items-center mb-2">
+										<label className="text-sm font-medium text-slate-600">
+											Battery Size:{" "}
+											<span className="text-blue-600 font-bold">
+												{batterySize} kWh
+											</span>
+										</label>
+									</div>
+									<input
+										type="range"
+										min="0"
+										max="20"
+										step="0.5"
+										value={batterySize}
+										onChange={(e) => setBatterySize(parseFloat(e.target.value))}
+										className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-500"
+									/>
+									<div className="flex justify-between mt-1 px-1">
+										<span className="text-[10px] text-slate-400">0 kWh</span>
+										<span className="text-[10px] text-slate-400">10 kWh</span>
+										<span className="text-[10px] text-slate-400">20 kWh</span>
+									</div>
+								</div>
+
+								<div className="grid grid-cols-2 gap-4">
+									<div>
+										<label className="block text-xs font-medium text-slate-500 mb-1">
+											Cost (€/kWh)
+										</label>
+										<input
+											type="number"
+											value={batteryCostPerKWh}
+											onChange={(e) =>
+												setBatteryCostPerKWh(parseFloat(e.target.value) || 0)
+											}
+											className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+										/>
+									</div>
+									<div>
+										<label className="block text-xs font-medium text-slate-500 mb-1">
+											Recup (yrs)
+										</label>
+										<input
+											type="number"
+											value={batteryRecupYears}
+											onChange={(e) =>
+												setBatteryRecupYears(parseFloat(e.target.value) || 0)
+											}
+											className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
 										/>
 									</div>
 								</div>
@@ -462,14 +546,13 @@ function App() {
 											</p>
 										</div>
 
-										{rec.yearsToRecup <= ESO_PRICES.BATTERY_RECUP_YEARS &&
-											rec.size > 0 && (
-												<div className="mt-4 pt-4 border-t border-white/10">
-													<span className="text-[10px] bg-emerald-500 text-white px-2 py-0.5 rounded-full font-bold">
-														RECOMENDED
-													</span>
-												</div>
-											)}
+										{rec.yearsToRecup <= batteryRecupYears && rec.size > 0 && (
+											<div className="mt-4 pt-4 border-t border-white/10">
+												<span className="text-[10px] bg-emerald-500 text-white px-2 py-0.5 rounded-full font-bold">
+													RECOMENDED
+												</span>
+											</div>
+										)}
 									</div>
 								))}
 							</div>
@@ -477,13 +560,12 @@ function App() {
 							<div className="mt-8 flex items-start gap-3 p-4 bg-white/5 rounded-2xl border border-white/10">
 								<AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
 								<p className="text-sm text-white/70 leading-relaxed">
-									Battery size recommendation is based on a{" "}
-									{ESO_PRICES.BATTERY_RECUP_YEARS}-year recuperation target at{" "}
-									{ESO_PRICES.BATTERY_COST_PER_KWH}€/kWh. Currently, your{" "}
-									<strong>{batterySize}kWh</strong> battery{" "}
+									Battery size recommendation is based on a {batteryRecupYears}
+									-year recuperation target at {batteryCostPerKWh}€/kWh.
+									Currently, your <strong>{batterySize}kWh</strong> battery{" "}
 									{batterySize > 0 &&
 									batteryRecs.find((r) => r.size === batterySize)
-										?.yearsToRecup! <= ESO_PRICES.BATTERY_RECUP_YEARS
+										?.yearsToRecup! <= batteryRecupYears
 										? "is a solid investment"
 										: "might be too large for your current consumption profile"}
 									.
