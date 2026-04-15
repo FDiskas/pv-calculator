@@ -20,6 +20,7 @@ export interface CalculationResult {
 
 export interface PlanComparison {
   planName: string;
+  planSubtitle: string;
   reclaimCost: number;
   purchaseCost: number;
   capacityCost: number;
@@ -105,7 +106,8 @@ export function evaluatePlans(
     const reclaimedkWh1 = Math.min(totalSent, totalTaken);
     const purchasedkWh1 = Math.max(0, totalTaken - totalSent);
     const plan1: PlanComparison = {
-      planName: "Plan I (Pay per kWh reclaimed)",
+      planName: "Plan I",
+      planSubtitle: "Pay per kWh reclaimed",
       reclaimCost: reclaimedkWh1 * ESO_PRICES.PLAN_1_RECLAIM_FEE,
       purchaseCost: purchasedkWh1 * electricityPrice,
       capacityCost: 0,
@@ -114,7 +116,8 @@ export function evaluatePlans(
 
     // Plan 2: Pay for capacity
     const plan2: PlanComparison = {
-      planName: "Plan II (Pay for capacity)",
+      planName: "Plan II",
+      planSubtitle: "Pay for capacity",
       reclaimCost: 0,
       purchaseCost: purchasedkWh1 * electricityPrice,
       capacityCost: ESO_PRICES.PLAN_2_CAPACITY_FEE * capacityKW * 12,
@@ -124,7 +127,8 @@ export function evaluatePlans(
     // Plan 3: Energy exchange
     const purchasedkWh3 = Math.max(0, totalTaken - (totalSent * ESO_PRICES.PLAN_3_ENERGY_SHARE));
     const plan3: PlanComparison = {
-      planName: "Plan III (Energy exchange 37%)",
+      planName: "Plan III",
+      planSubtitle: "Energy exchange 37%",
       reclaimCost: 0,
       purchaseCost: purchasedkWh3 * electricityPrice,
       capacityCost: 0,
