@@ -31,7 +31,7 @@ export const ESO_PRICES = {
   PLAN_2_CAPACITY_FEE: 5.0336, // per kW per month
   PLAN_3_ENERGY_SHARE: 0.63, // 63% remains for the user
   BATTERY_COST_PER_KWH: 400,
-  BATTERY_RECUP_YEARS: 10,
+  BATTERY_RECUP_YEARS: 25,
 };
 
 export function calculateBatteryCoverage(
@@ -39,7 +39,7 @@ export function calculateBatteryCoverage(
   takenFromGrid: number,
   sentToGrid: number
 ) {
-  // Rough presumption: used from battery during night, charged during day.
+  // Rough presumption: used from a battery during night, charged during day.
   // Capacity * 30 is the max charge/discharge per month (one full cycle per day).
   return Math.min(batterySize * 30, Math.min(takenFromGrid, sentToGrid));
 }
@@ -96,9 +96,7 @@ export function evaluatePlans(
   const resultsNoBattery = calculateResults(inputs, 0, electricityPrice);
   const resultsWithBattery = calculateResults(inputs, batterySize, electricityPrice);
 
-  const calculatePlanTotals = (results: CalculationResult[], withBattery: boolean) => {
-    // For Plan Comparison, we need to apply each plan's logic to the 'withBattery' or 'noBattery' scenario
-    
+  const calculatePlanTotals = (results: CalculationResult[]) => {
     // Total sent to grid in the scenario
     const totalSent = results.reduce((acc, r) => acc + r.sentToGridWithBattery, 0);
     const totalTaken = results.reduce((acc, r) => acc + r.takenFromGridWithBattery, 0);
@@ -137,8 +135,8 @@ export function evaluatePlans(
   };
 
   return {
-    noBattery: calculatePlanTotals(resultsNoBattery, false),
-    withBattery: calculatePlanTotals(resultsWithBattery, true),
+    noBattery: calculatePlanTotals(resultsNoBattery),
+    withBattery: calculatePlanTotals(resultsWithBattery),
     resultsWithBattery,
     resultsNoBattery
   };
@@ -147,11 +145,13 @@ export function evaluatePlans(
 export function getBatteryRecommendation(
   inputs: MonthlyInput[],
   electricityPrice: number,
-  capacityKW: number
+  capacityKW: number,
+  selectedSize: number
 ) {
   // Try different battery sizes to find optimal
-  const sizes = [0, 5, 10, 15, 20];
-  const evaluations = sizes.map(size => {
+  const sizes = Array.from(new Set([0, Math.max(0, selectedSize - 5), selectedSize, selectedSize + 5, selectedSize + 10])).sort((a, b) => a - b);
+
+  return sizes.map(size => {
     const evalResult = evaluatePlans(inputs, size, electricityPrice, capacityKW);
     const bestPlanWithBattery = Math.min(...evalResult.withBattery.map(p => p.grandTotal));
     const bestPlanNoBattery = Math.min(...evalResult.noBattery.map(p => p.grandTotal));
@@ -161,6 +161,4 @@ export function getBatteryRecommendation(
     
     return { size, annualSaving, batteryCost, yearsToRecup };
   });
-
-  return evaluations;
 }

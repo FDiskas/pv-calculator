@@ -80,8 +80,8 @@ function App() {
   }, [monthlyInputs, batterySize, electricityPrice, capacityKW]);
 
   const batteryRecs = useMemo(() => {
-    return getBatteryRecommendation(monthlyInputs, electricityPrice, capacityKW);
-  }, [monthlyInputs, electricityPrice, capacityKW]);
+    return getBatteryRecommendation(monthlyInputs, electricityPrice, capacityKW, batterySize);
+  }, [monthlyInputs, electricityPrice, capacityKW, batterySize]);
 
   const updateMonthlyInput = (index: number, field: keyof MonthlyInput, value: string) => {
     const numValue = parseFloat(value) || 0;
@@ -115,7 +115,9 @@ function App() {
           <div className="hidden sm:flex items-center gap-6 text-sm font-medium text-slate-500">
             <span className="text-amber-600">Calculator</span>
             <span>Insights</span>
-            <span>ESO 2026 Guide</span>
+            <span>
+              <a href="https://www.eso.lt/namams/elektra/tarifu-planai-kainos-atsiskaitymas/gaminanciu-vartotoju-atsiskaitymo-budai-2026-metais/4829" target="_blank" rel="noreferrer">ESO 2026 Guide</a>
+            </span>
           </div>
         </div>
       </header>
@@ -331,16 +333,17 @@ function App() {
                     rec.size === batterySize ? "bg-amber-500 border-amber-400 scale-105 shadow-xl shadow-amber-500/20" : "bg-white/5 border-white/10"
                   )}>
                     <p className="text-sm font-medium opacity-70 mb-1">{rec.size} kWh</p>
-                    <p className="text-xl font-black mb-4">{(rec.annualSaving).toFixed(0)}€<span className="text-xs opacity-60 font-normal">/yr</span></p>
+                    <p className="text-xl font-black mb-1">{(rec.annualSaving).toFixed(0)}€<span className="text-xs opacity-60 font-normal">/yr</span></p>
+                    <p className="text-[10px] text-white/40 mb-4">Total Cost: {rec.batteryCost.toFixed(0)}€</p>
                     
                     <div className="space-y-1">
                       <p className="text-[10px] uppercase tracking-wider opacity-50">Recup Period</p>
                       <p className="text-sm font-bold">
-                        {rec.yearsToRecup === Infinity ? "No recoup" : `${rec.yearsToRecup.toFixed(1)} years`}
+                        {rec.yearsToRecup === Infinity || rec.size === 0 ? "No recoup" : `${rec.yearsToRecup.toFixed(1)} years`}
                       </p>
                     </div>
 
-                    {rec.yearsToRecup <= 10 && rec.size > 0 && (
+                    {rec.yearsToRecup <= ESO_PRICES.BATTERY_RECUP_YEARS && rec.size > 0 && (
                       <div className="mt-4 pt-4 border-t border-white/10">
                         <span className="text-[10px] bg-emerald-500 text-white px-2 py-0.5 rounded-full font-bold">RECOMENDED</span>
                       </div>
@@ -352,8 +355,8 @@ function App() {
               <div className="mt-8 flex items-start gap-3 p-4 bg-white/5 rounded-2xl border border-white/10">
                 <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
                 <p className="text-sm text-white/70 leading-relaxed">
-                  Battery size recommendation is based on a 10-year recuperation target at {ESO_PRICES.BATTERY_COST_PER_KWH}€/kWh. 
-                  Currently, your <strong>{batterySize}kWh</strong> battery {batterySize > 0 && batteryRecs.find(r => r.size === batterySize)?.yearsToRecup! <= 10 ? "is a solid investment" : "might be too large for your current consumption profile"}.
+                  Battery size recommendation is based on a {ESO_PRICES.BATTERY_RECUP_YEARS}-year recuperation target at {ESO_PRICES.BATTERY_COST_PER_KWH}€/kWh.
+                  Currently, your <strong>{batterySize}kWh</strong> battery {batterySize > 0 && batteryRecs.find(r => r.size === batterySize)?.yearsToRecup! <= ESO_PRICES.BATTERY_RECUP_YEARS ? "is a solid investment" : "might be too large for your current consumption profile"}.
                 </p>
               </div>
             </section>
