@@ -2,7 +2,7 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: Just cause */
 /** biome-ignore-all lint/suspicious/noNonNullAssertedOptionalChain: Just cause */
 import { createFileRoute } from '@tanstack/react-router';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { 
   Calculator, 
   Battery, 
@@ -29,19 +29,51 @@ const MONTHS = [
   'October', 'November', 'December', 'January', 'February', 'March'
 ];
 
+const STORAGE_KEY = 'electricity_planner_data';
+
+const DEFAULT_MONTHLY_INPUTS: MonthlyInput[] = MONTHS.map(month => ({
+  month,
+  sentToGrid: 500,
+  purchasedFromGrid: 100,
+  reclaimedFromGrid: 500,
+}));
+
 function App() {
+  const [isLoaded, setIsLoaded] = useState(false);
   const [batterySize, setBatterySize] = useState<number>(5);
   const [electricityPrice, setElectricityPrice] = useState<number>(0.25);
   const [capacityKW, setCapacityKW] = useState<number>(10);
   
-  const [monthlyInputs, setMonthlyInputs] = useState<MonthlyInput[]>(
-    MONTHS.map(month => ({
-      month,
-      sentToGrid: 500,
-      purchasedFromGrid: 100,
-      reclaimedFromGrid: 200,
-    }))
-  );
+  const [monthlyInputs, setMonthlyInputs] = useState<MonthlyInput[]>(DEFAULT_MONTHLY_INPUTS);
+
+  // Load from local storage
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.batterySize === 'number') setBatterySize(parsed.batterySize);
+        if (typeof parsed.electricityPrice === 'number') setElectricityPrice(parsed.electricityPrice);
+        if (typeof parsed.capacityKW === 'number') setCapacityKW(parsed.capacityKW);
+        if (Array.isArray(parsed.monthlyInputs)) setMonthlyInputs(parsed.monthlyInputs);
+      } catch (e) {
+        console.error('Failed to parse saved data', e);
+      }
+    }
+    setIsLoaded(true);
+  }, []);
+
+  // Save to local storage
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        batterySize,
+        electricityPrice,
+        capacityKW,
+        monthlyInputs
+      }));
+    }
+  }, [batterySize, electricityPrice, capacityKW, monthlyInputs, isLoaded]);
 
   const results = useMemo(() => {
     return evaluatePlans(monthlyInputs, batterySize, electricityPrice, capacityKW);
