@@ -30,8 +30,7 @@ const STORAGE_KEY = "electricity_planner_data";
 const DEFAULT_MONTHLY_INPUTS: MonthlyInput[] = MONTHS.map((month) => ({
 	month,
 	sentToGrid: 500,
-	purchasedFromGrid: 100,
-	reclaimedFromGrid: 500,
+	takenFromGrid: 100,
 	electricityPrice: 0.25,
 }));
 
@@ -308,8 +307,33 @@ function App() {
 									</p>
 									<p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
 										<Info className="w-3 h-3" />
-										Compared to no battery scenario
+										<span>
+											<span>Covered by battery:</span>
+											&nbsp;
+											<span>
+												{results.totalCoveredByBattery.toFixed(0)} kWh
+											</span>
+										</span>
 									</p>
+								</div>
+
+								<div className="grid grid-cols-2 gap-4">
+									<div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+										<p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">
+											Taken from Grid
+										</p>
+										<p className="text-lg font-bold text-slate-700">
+											{results.totalTakenFromGrid.toFixed(0)} kWh
+										</p>
+									</div>
+									<div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+										<p className="text-[10px] font-medium text-slate-500 uppercase tracking-wider mb-1">
+											Sent to Grid
+										</p>
+										<p className="text-lg font-bold text-slate-700">
+											{results.totalSentToGrid.toFixed(0)} kWh
+										</p>
+									</div>
 								</div>
 							</div>
 						</section>
@@ -384,13 +408,60 @@ function App() {
 														{plan.capacityCost.toFixed(2)}€
 													</span>
 												</div>
-												<div className="flex justify-between items-center py-2">
+												<div className="flex justify-between items-center py-2 border-b border-slate-50">
 													<span className="text-xs font-medium text-slate-500">
 														Purchase Total
 													</span>
 													<span className="text-sm font-semibold text-slate-700">
 														{plan.purchaseCost.toFixed(2)}€
 													</span>
+												</div>
+												<div className="pt-2 mt-2 space-y-2">
+													<div className="flex justify-between items-center">
+														<span className="text-[10px] text-slate-400 uppercase">
+															Stored in Grid
+														</span>
+														<span className="text-xs font-bold text-slate-600">
+															{plan.totalStored.toFixed(0)} kWh
+														</span>
+													</div>
+													<div className="flex justify-between items-center">
+														<span className="text-[10px] text-slate-400 uppercase">
+															Reclaimed
+														</span>
+														<span className="text-xs font-bold text-slate-600">
+															{plan.totalReclaimed.toFixed(0)} kWh
+														</span>
+													</div>
+													<div className="flex justify-between items-center">
+														<span className="text-[10px] text-slate-400 uppercase">
+															Deficit
+														</span>
+														<span className="text-xs font-bold text-slate-600">
+															{plan.totalDeficit.toFixed(0)} kWh
+														</span>
+													</div>
+													<div className="flex justify-between items-center">
+														<span className="text-[10px] text-slate-400 uppercase">
+															Reclaim Price
+														</span>
+														<span
+															className={cn(
+																"text-xs font-bold",
+																plan.reclaimPricePerKWh > 0
+																	? "text-amber-600"
+																	: "text-slate-600",
+															)}
+														>
+															<span>
+																{plan.reclaimPricePerKWh > 0
+																	? plan.reclaimPricePerKWh.toFixed(4)
+																	: 0}
+															</span>
+															&nbsp;
+															<span>€/kWh</span>
+														</span>
+													</div>
 												</div>
 											</div>
 										</div>
@@ -549,13 +620,10 @@ function App() {
 											<tr className="text-slate-400 font-medium border-b border-slate-100">
 												<th className="pb-4 text-left font-medium">Month</th>
 												<th className="pb-4 text-left font-medium">
+													Taken from grid (kWh)
+												</th>
+												<th className="pb-4 text-left font-medium">
 													Sent to Grid (kWh)
-												</th>
-												<th className="pb-4 text-left font-medium">
-													Purchased (kWh)
-												</th>
-												<th className="pb-4 text-left font-medium">
-													Reclaimed (kWh)
 												</th>
 												<th className="pb-4 text-left font-medium">
 													Price (€/kWh)
@@ -571,39 +639,25 @@ function App() {
 													<td className="py-3">
 														<input
 															type="number"
+															value={input.takenFromGrid}
+															onChange={(e) =>
+																updateMonthlyInput(
+																	idx,
+																	"takenFromGrid",
+																	e.target.value,
+																)
+															}
+															className="w-20 px-2 py-1 bg-slate-50 border border-slate-100 rounded-md focus:ring-2 focus:ring-amber-500 outline-none"
+														/>
+													</td>
+													<td className="py-3">
+														<input
+															type="number"
 															value={input.sentToGrid}
 															onChange={(e) =>
 																updateMonthlyInput(
 																	idx,
 																	"sentToGrid",
-																	e.target.value,
-																)
-															}
-															className="w-20 px-2 py-1 bg-slate-50 border border-slate-100 rounded-md focus:ring-2 focus:ring-amber-500 outline-none"
-														/>
-													</td>
-													<td className="py-3">
-														<input
-															type="number"
-															value={input.purchasedFromGrid}
-															onChange={(e) =>
-																updateMonthlyInput(
-																	idx,
-																	"purchasedFromGrid",
-																	e.target.value,
-																)
-															}
-															className="w-20 px-2 py-1 bg-slate-50 border border-slate-100 rounded-md focus:ring-2 focus:ring-amber-500 outline-none"
-														/>
-													</td>
-													<td className="py-3">
-														<input
-															type="number"
-															value={input.reclaimedFromGrid}
-															onChange={(e) =>
-																updateMonthlyInput(
-																	idx,
-																	"reclaimedFromGrid",
 																	e.target.value,
 																)
 															}
