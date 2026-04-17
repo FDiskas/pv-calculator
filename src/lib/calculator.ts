@@ -3,6 +3,7 @@ export interface MonthlyInput {
 	sentToGrid: number; // Surplus electricity sent to grid from PV
 	purchasedFromGrid: number; // Purchased at full price
 	reclaimedFromGrid: number; // Reclaimed from grid storage
+	electricityPrice: number; // Price for this month
 }
 
 export interface CalculationResult {
@@ -48,7 +49,6 @@ export function calculateBatteryCoverage(
 export function calculateResults(
 	inputs: MonthlyInput[],
 	batterySize: number,
-	electricityPrice: number,
 ): CalculationResult[] {
 	let accumulatedStorage = 0;
 
@@ -90,10 +90,10 @@ export function calculateResults(
 			storedInGrid: accumulatedStorage,
 			deficit,
 			reclaimTotal: reclaimedFromStorage * ESO_PRICES.PLAN_1_RECLAIM_FEE,
-			purchaseTotal: deficit * electricityPrice,
+			purchaseTotal: deficit * input.electricityPrice,
 			grandTotal:
 				reclaimedFromStorage * ESO_PRICES.PLAN_1_RECLAIM_FEE +
-				deficit * electricityPrice,
+				deficit * input.electricityPrice,
 		};
 	});
 }
@@ -101,16 +101,11 @@ export function calculateResults(
 export function evaluatePlans(
 	inputs: MonthlyInput[],
 	batterySize: number,
-	electricityPrice: number,
 	capacityKW: number,
 ) {
 	// We evaluate each plan both WITH and WITHOUT battery
-	const resultsNoBattery = calculateResults(inputs, 0, electricityPrice);
-	const resultsWithBattery = calculateResults(
-		inputs,
-		batterySize,
-		electricityPrice,
-	);
+	const resultsNoBattery = calculateResults(inputs, 0);
+	const resultsWithBattery = calculateResults(inputs, batterySize);
 
 	const calculatePlanTotals = (results: CalculationResult[]) => {
 		// Total sent to grid in the scenario
@@ -125,16 +120,18 @@ export function evaluatePlans(
 
 		// Plan 1: Pay per kWh reclaimed
 		const reclaimedkWh1 = Math.min(totalSent, totalTaken);
-		const purchasedkWh1 = Math.max(0, totalTaken - totalSent);
+		const plan1PurchaseCost = results.reduce((acc, r) => {
+			return acc + r.purchaseTotal;
+		}, 0);
+
 		const plan1: PlanComparison = {
 			planName: "Plan I",
 			planSubtitle: "Pay per kWh reclaimed",
 			reclaimCost: reclaimedkWh1 * ESO_PRICES.PLAN_1_RECLAIM_FEE,
-			purchaseCost: purchasedkWh1 * electricityPrice,
+			purchaseCost: plan1PurchaseCost,
 			capacityCost: 0,
 			grandTotal:
-				reclaimedkWh1 * ESO_PRICES.PLAN_1_RECLAIM_FEE +
-				purchasedkWh1 * electricityPrice,
+				reclaimedkWh1 * ESO_PRICES.PLAN_1_RECLAIM_FEE + plan1PurchaseCost,
 		};
 
 		// Plan 2: Pay for capacity
@@ -142,25 +139,36 @@ export function evaluatePlans(
 			planName: "Plan II",
 			planSubtitle: "Pay for capacity",
 			reclaimCost: 0,
-			purchaseCost: purchasedkWh1 * electricityPrice,
+			purchaseCost: plan1PurchaseCost,
 			capacityCost: ESO_PRICES.PLAN_2_CAPACITY_FEE * capacityKW * 12,
 			grandTotal:
-				purchasedkWh1 * electricityPrice +
-				ESO_PRICES.PLAN_2_CAPACITY_FEE * capacityKW * 12,
+				plan1PurchaseCost + ESO_PRICES.PLAN_2_CAPACITY_FEE * capacityKW * 12,
 		};
 
 		// Plan 3: Energy exchange
-		const purchasedkWh3 = Math.max(
-			0,
-			totalTaken - totalSent * ESO_PRICES.PLAN_3_ENERGY_SHARE,
-		);
+		// For Plan 3, we need to recalculate deficit because the reclaim ratio is different (0.63)
+		let accumulatedStorage3 = 0;
+		let purchaseCost3 = 0;
+		for (let i = 0; i < inputs.length; i++) {
+			const r = results[i];
+			accumulatedStorage3 +=
+				r.sentToGridWithBattery * ESO_PRICES.PLAN_3_ENERGY_SHARE;
+			const reclaimedFromStorage3 = Math.min(
+				accumulatedStorage3,
+				r.takenFromGridWithBattery,
+			);
+			accumulatedStorage3 -= reclaimedFromStorage3;
+			const deficit3 = r.takenFromGridWithBattery - reclaimedFromStorage3;
+			purchaseCost3 += deficit3 * inputs[i].electricityPrice;
+		}
+
 		const plan3: PlanComparison = {
 			planName: "Plan III",
 			planSubtitle: "Energy exchange 37%",
 			reclaimCost: 0,
-			purchaseCost: purchasedkWh3 * electricityPrice,
+			purchaseCost: purchaseCost3,
 			capacityCost: 0,
-			grandTotal: purchasedkWh3 * electricityPrice,
+			grandTotal: purchaseCost3,
 		};
 
 		return [plan1, plan2, plan3];
@@ -176,7 +184,6 @@ export function evaluatePlans(
 
 export function getBatteryRecommendation(
 	inputs: MonthlyInput[],
-	electricityPrice: number,
 	capacityKW: number,
 	selectedSize: number,
 	batteryCostPerKWh: number,
@@ -193,12 +200,7 @@ export function getBatteryRecommendation(
 	).sort((a, b) => a - b);
 
 	return sizes.map((size) => {
-		const evalResult = evaluatePlans(
-			inputs,
-			size,
-			electricityPrice,
-			capacityKW,
-		);
+		const evalResult = evaluatePlans(inputs, size, capacityKW);
 		const bestPlanWithBattery = Math.min(
 			...evalResult.withBattery.map((p) => p.grandTotal),
 		);

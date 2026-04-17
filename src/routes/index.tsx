@@ -2,8 +2,9 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: Just cause */
 /** biome-ignore-all lint/suspicious/noNonNullAssertedOptionalChain: Just cause */
 import {createFileRoute} from "@tanstack/react-router";
-import {AlertCircle, BarChart3, Battery, Calculator, Euro, Info, TrendingUp, Zap,} from "lucide-react";
+import {AlertCircle, BarChart3, Battery, Calculator, Euro, Info, Percent, TrendingUp, Zap,} from "lucide-react";
 import {useEffect, useMemo, useState} from "react";
+import {fetchNordPoolPrices} from "../lib/api";
 import {ESO_PRICES, evaluatePlans, getBatteryRecommendation, type MonthlyInput,} from "../lib/calculator";
 import {cn} from "../lib/utils";
 
@@ -31,12 +32,15 @@ const DEFAULT_MONTHLY_INPUTS: MonthlyInput[] = MONTHS.map((month) => ({
 	sentToGrid: 500,
 	purchasedFromGrid: 100,
 	reclaimedFromGrid: 500,
+	electricityPrice: 0.25,
 }));
 
 function App() {
 	const [isLoaded, setIsLoaded] = useState(false);
+	const [isLoadingPrices, setIsLoadingPrices] = useState(false);
 	const [batterySize, setBatterySize] = useState<number>(5);
-	const [electricityPrice, setElectricityPrice] = useState<number>(0.25);
+	const [vat, setVat] = useState<number>(21);
+	const [operatorCost, setOperatorCost] = useState<number>(0.136);
 	const [capacityKW, setCapacityKW] = useState<number>(10);
 	const [batteryCostPerKWh, setBatteryCostPerKWh] = useState<number>(
 		ESO_PRICES.BATTERY_COST_PER_KWH,
@@ -57,8 +61,9 @@ function App() {
 				const parsed = JSON.parse(saved);
 				if (typeof parsed.batterySize === "number")
 					setBatterySize(parsed.batterySize);
-				if (typeof parsed.electricityPrice === "number")
-					setElectricityPrice(parsed.electricityPrice);
+				if (typeof parsed.operatorCost === "number")
+					setOperatorCost(parsed.operatorCost);
+				if (typeof parsed.vat === "number") setVat(parsed.vat);
 				if (typeof parsed.capacityKW === "number")
 					setCapacityKW(parsed.capacityKW);
 				if (typeof parsed.batteryCostPerKWh === "number")
@@ -81,7 +86,8 @@ function App() {
 				STORAGE_KEY,
 				JSON.stringify({
 					batterySize,
-					electricityPrice,
+					operatorCost,
+					vat,
 					capacityKW,
 					batteryCostPerKWh,
 					batteryRecupYears,
@@ -91,7 +97,8 @@ function App() {
 		}
 	}, [
 		batterySize,
-		electricityPrice,
+		operatorCost,
+		vat,
 		capacityKW,
 		monthlyInputs,
 		isLoaded,
@@ -100,29 +107,17 @@ function App() {
 	]);
 
 	const results = useMemo(() => {
-		return evaluatePlans(
-			monthlyInputs,
-			batterySize,
-			electricityPrice,
-			capacityKW,
-		);
-	}, [monthlyInputs, batterySize, electricityPrice, capacityKW]);
+		return evaluatePlans(monthlyInputs, batterySize, capacityKW);
+	}, [monthlyInputs, batterySize, capacityKW]);
 
 	const batteryRecs = useMemo(() => {
 		return getBatteryRecommendation(
 			monthlyInputs,
-			electricityPrice,
 			capacityKW,
 			batterySize,
 			batteryCostPerKWh,
 		);
-	}, [
-		monthlyInputs,
-		electricityPrice,
-		capacityKW,
-		batterySize,
-		batteryCostPerKWh,
-	]);
+	}, [monthlyInputs, capacityKW, batterySize, batteryCostPerKWh]);
 
 	const updateMonthlyInput = (
 		index: number,
@@ -186,24 +181,6 @@ function App() {
 							</div>
 
 							<div className="space-y-4">
-								<div>
-									<label className="block text-sm font-medium text-slate-600 mb-1">
-										Electricity Price (€/kWh)
-									</label>
-									<div className="relative">
-										<Euro className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-										<input
-											type="number"
-											step="0.01"
-											value={electricityPrice}
-											onChange={(e) =>
-												setElectricityPrice(parseFloat(e.target.value) || 0)
-											}
-											className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-all"
-										/>
-									</div>
-								</div>
-
 								<div>
 									<label className="block text-sm font-medium text-slate-600 mb-1">
 										Plant Capacity (kW)
@@ -424,10 +401,146 @@ function App() {
 
 						{/* Monthly Data Input */}
 						<section className="bg-white rounded-2xl shadow-sm border border-slate-200">
-							<div className="px-6 py-4 border-b border-slate-100">
+							<div className="px-6 py-4 border-b border-slate-100 flex flex-col gap-3">
 								<h2 className="font-bold text-slate-800">
 									Monthly Generation & Consumption
 								</h2>
+								<div className="flex items-center self-end gap-3">
+									<div className="flex items-center gap-1.5">
+										<label
+											htmlFor="vat"
+											className="text-[10px] font-bold text-slate-400 uppercase tracking-wider"
+										>
+											VAT:
+										</label>
+										<div className="relative">
+											<Percent className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
+											<input
+												id="vat"
+												type="number"
+												step="1"
+												value={vat}
+												onChange={(e) => setVat(parseInt(e.target.value) || 0)}
+												className="w-20 pl-6 pr-2 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none transition-all"
+											/>
+										</div>
+									</div>
+									<div className="flex items-center gap-1.5">
+										<label
+											htmlFor="operator-cost"
+											className="text-[10px] font-bold text-slate-400 uppercase tracking-wider"
+										>
+											Operator Cost:
+										</label>
+										<div className="relative">
+											<Euro className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
+											<input
+												id="operator-cost"
+												type="number"
+												step="0.001"
+												value={operatorCost}
+												onChange={(e) =>
+													setOperatorCost(parseFloat(e.target.value) || 0)
+												}
+												className="w-20 pl-6 pr-2 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none transition-all"
+											/>
+										</div>
+									</div>
+									<div className="flex items-center gap-1.5">
+										<label
+											htmlFor="nordpool-year"
+											className="text-[10px] font-bold text-slate-400 uppercase tracking-wider"
+										>
+											Year:
+										</label>
+										<select
+											id="nordpool-year"
+											className="text-xs border border-slate-200 rounded-lg px-2 py-1 bg-white outline-none focus:ring-2 focus:ring-amber-500"
+											defaultValue="2025"
+										>
+											<option value="2024">2024-2025</option>
+											<option value="2025">2025-2026</option>
+										</select>
+									</div>
+									<button
+										type="button"
+										disabled={isLoadingPrices}
+										onClick={async () => {
+											const year = (
+												document.getElementById(
+													"nordpool-year",
+												) as HTMLSelectElement
+											).value;
+											setIsLoadingPrices(true);
+											try {
+												const json = await fetchNordPoolPrices({
+													data: { year },
+												});
+												if (json.success && json.data.lt) {
+													const ltData: { timestamp: number; price: number }[] =
+														json.data.lt;
+													// Group by month and calculate average
+													const monthlyAverages: Record<
+														string,
+														{ sum: number; count: number }
+													> = {};
+													for (const entry of ltData) {
+														const date = new Date(entry.timestamp * 1000);
+														const monthName = date.toLocaleString("en-US", {
+															month: "long",
+														});
+														if (!monthlyAverages[monthName]) {
+															monthlyAverages[monthName] = { sum: 0, count: 0 };
+														}
+														monthlyAverages[monthName].sum += entry.price;
+														monthlyAverages[monthName].count += 1;
+													}
+
+													setMonthlyInputs((prev) =>
+														prev.map((input) => {
+															const avg = monthlyAverages[input.month];
+															if (avg) {
+																const nordPoolKWh = avg.sum / avg.count / 1000;
+																return {
+																	...input,
+																	electricityPrice: Number(
+																		(
+																			nordPoolKWh * (1 + vat / 100) +
+																			operatorCost
+																		).toFixed(2),
+																	),
+																};
+															}
+															return input;
+														}),
+													);
+												}
+											} catch (e) {
+												console.error("Failed to fetch NordPool prices", e);
+											} finally {
+												setIsLoadingPrices(false);
+											}
+										}}
+										className={cn(
+											"text-xs font-bold py-1 px-3 rounded-lg transition-colors flex items-center gap-1",
+											isLoadingPrices
+												? "bg-slate-200 text-slate-400 cursor-not-allowed"
+												: "bg-amber-500 hover:bg-amber-600 text-white",
+										)}
+									>
+										{isLoadingPrices ? (
+											<>
+												<div className="w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+												Loading...
+											</>
+										) : (
+											<>
+												<TrendingUp className="w-3 h-3" />
+												Pre-fill from NordPool
+											</>
+										)}
+									</button>
+								</div>
 							</div>
 							<div className="p-6">
 								<div className="overflow-x-auto">
@@ -443,6 +556,9 @@ function App() {
 												</th>
 												<th className="pb-4 text-left font-medium">
 													Reclaimed (kWh)
+												</th>
+												<th className="pb-4 text-left font-medium">
+													Price (€/kWh)
 												</th>
 											</tr>
 										</thead>
@@ -463,7 +579,7 @@ function App() {
 																	e.target.value,
 																)
 															}
-															className="w-24 px-2 py-1 bg-slate-50 border border-slate-100 rounded-md focus:ring-2 focus:ring-amber-500 outline-none"
+															className="w-20 px-2 py-1 bg-slate-50 border border-slate-100 rounded-md focus:ring-2 focus:ring-amber-500 outline-none"
 														/>
 													</td>
 													<td className="py-3">
@@ -477,7 +593,7 @@ function App() {
 																	e.target.value,
 																)
 															}
-															className="w-24 px-2 py-1 bg-slate-50 border border-slate-100 rounded-md focus:ring-2 focus:ring-amber-500 outline-none"
+															className="w-20 px-2 py-1 bg-slate-50 border border-slate-100 rounded-md focus:ring-2 focus:ring-amber-500 outline-none"
 														/>
 													</td>
 													<td className="py-3">
@@ -491,7 +607,22 @@ function App() {
 																	e.target.value,
 																)
 															}
-															className="w-24 px-2 py-1 bg-slate-50 border border-slate-100 rounded-md focus:ring-2 focus:ring-amber-500 outline-none"
+															className="w-20 px-2 py-1 bg-slate-50 border border-slate-100 rounded-md focus:ring-2 focus:ring-amber-500 outline-none"
+														/>
+													</td>
+													<td className="py-3">
+														<input
+															type="number"
+															step="0.001"
+															value={input.electricityPrice}
+															onChange={(e) =>
+																updateMonthlyInput(
+																	idx,
+																	"electricityPrice",
+																	e.target.value,
+																)
+															}
+															className="w-20 px-2 py-1 bg-slate-50 border border-slate-100 rounded-md focus:ring-2 focus:ring-amber-500 outline-none font-medium text-amber-600"
 														/>
 													</td>
 												</tr>
