@@ -202,8 +202,27 @@ function App() {
 						<section className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
 							<div className="flex items-center justify-between mb-6">
 								<div className="flex items-center gap-2">
-									<Battery className="w-5 h-5 text-blue-500" />
-									<h2 className="font-semibold text-lg">Battery Settings</h2>
+									<div className="flex items-center gap-2">
+										<Battery className="w-5 h-5 text-blue-500" />
+										<h2 className="font-semibold text-lg">Battery Settings</h2>
+									</div>
+									<div className="group relative">
+										<Info className="w-4 h-4 text-slate-400 cursor-help" />
+										<div className="absolute right-0 bottom-full mb-2 w-64 p-3 bg-slate-800 text-white text-[11px] rounded-xl shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+											<p className="font-bold mb-1">
+												Battery coverage estimation:
+											</p>
+											<p className="leading-relaxed">
+												Presumes one full battery cycle per day at maximum while
+												not exceeding:
+											</p>
+											<ul className="list-disc ml-3 mt-1 space-y-0.5 text-slate-300">
+												<li>Battery potential (Capacity)</li>
+												<li>Generation (Sent to grid)</li>
+												<li>Consumption (Taken from grid)</li>
+											</ul>
+										</div>
+									</div>
 								</div>
 								{batterySize > 0 && (
 									<button
@@ -229,8 +248,8 @@ function App() {
 									<input
 										type="range"
 										min="0"
-										max="20"
-										step="0.5"
+										max="40"
+										step="1"
 										value={batterySize}
 										onChange={(e) => setBatterySize(parseFloat(e.target.value))}
 										className="w-full h-2 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-blue-500"
@@ -245,7 +264,7 @@ function App() {
 								<div className="grid grid-cols-2 gap-4">
 									<div>
 										<label className="block text-xs font-medium text-slate-500 mb-1">
-											Cost (€/kWh)
+											Purchase cost (€/kWh)
 										</label>
 										<input
 											type="number"
@@ -258,7 +277,7 @@ function App() {
 									</div>
 									<div>
 										<label className="block text-xs font-medium text-slate-500 mb-1">
-											Recup (yrs)
+											Desired recup (years)
 										</label>
 										<input
 											type="number"
@@ -391,37 +410,21 @@ function App() {
 												</div>
 											</div>
 
-											<div className="space-y-3 grow">
-												<div className="flex justify-between items-center py-2 border-b border-slate-50">
-													<span className="text-xs font-medium text-slate-500">
-														Reclaim Fee
-													</span>
-													<span className="text-sm font-semibold text-slate-700">
-														{plan.reclaimCost.toFixed(2)}€
-													</span>
-												</div>
-												<div className="flex justify-between items-center py-2 border-b border-slate-50">
-													<span className="text-xs font-medium text-slate-500">
-														Capacity Fee
-													</span>
-													<span className="text-sm font-semibold text-slate-700">
-														{plan.capacityCost.toFixed(2)}€
-													</span>
-												</div>
-												<div className="flex justify-between items-center py-2 border-b border-slate-50">
-													<span className="text-xs font-medium text-slate-500">
-														Purchase Total
-													</span>
-													<span className="text-sm font-semibold text-slate-700">
-														{plan.purchaseCost.toFixed(2)}€
-													</span>
-												</div>
-												<div className="pt-2 mt-2 space-y-2">
+											<div className="space-y-4 grow">
+												<div className="space-y-2 border-b border-slate-50">
+													<div className="flex justify-between items-center">
+														<span className="text-xs font-medium text-slate-500">
+															Reclaim Fee
+														</span>
+														<span className="text-sm font-semibold text-slate-700">
+															{plan.reclaimCost.toFixed(2)}€
+														</span>
+													</div>
 													<div className="flex justify-between items-center">
 														<span className="text-[10px] text-slate-400 uppercase">
 															Stored in Grid
 														</span>
-														<span className="text-xs font-bold text-slate-600">
+														<span className="text-xs font-bold text-slate-400">
 															{plan.totalStored.toFixed(0)} kWh
 														</span>
 													</div>
@@ -429,16 +432,8 @@ function App() {
 														<span className="text-[10px] text-slate-400 uppercase">
 															Reclaimed
 														</span>
-														<span className="text-xs font-bold text-slate-600">
+														<span className="text-xs font-bold text-slate-400">
 															{plan.totalReclaimed.toFixed(0)} kWh
-														</span>
-													</div>
-													<div className="flex justify-between items-center">
-														<span className="text-[10px] text-slate-400 uppercase">
-															Deficit
-														</span>
-														<span className="text-xs font-bold text-slate-600">
-															{plan.totalDeficit.toFixed(0)} kWh
 														</span>
 													</div>
 													<div className="flex justify-between items-center">
@@ -450,7 +445,7 @@ function App() {
 																"text-xs font-bold",
 																plan.reclaimPricePerKWh > 0
 																	? "text-amber-600"
-																	: "text-slate-600",
+																	: "text-slate-400",
 															)}
 														>
 															<span>
@@ -460,6 +455,36 @@ function App() {
 															</span>
 															&nbsp;
 															<span>€/kWh</span>
+														</span>
+													</div>
+												</div>
+
+												<div className="space-y-2 border-b border-slate-50">
+													<div className="flex justify-between items-center">
+														<span className="text-xs font-medium text-slate-500">
+															Purchase Total
+														</span>
+														<span className="text-sm font-semibold text-slate-700">
+															{plan.purchaseCost.toFixed(2)}€
+														</span>
+													</div>
+													<div className="flex justify-between items-center">
+														<span className="text-[10px] text-slate-400 uppercase">
+															Deficit
+														</span>
+														<span className="text-xs font-bold text-slate-400">
+															{plan.totalDeficit.toFixed(0)} kWh
+														</span>
+													</div>
+												</div>
+
+												<div className="space-y-2 border-b border-slate-50">
+													<div className="flex justify-between items-center">
+														<span className="text-xs font-medium text-slate-500">
+															Capacity Fee
+														</span>
+														<span className="text-sm font-semibold text-slate-700">
+															{plan.capacityCost.toFixed(2)}€
 														</span>
 													</div>
 												</div>

@@ -35,7 +35,7 @@ export interface PlanComparison {
 export const ESO_PRICES = {
 	PLAN_1_RECLAIM_FEE: 0.0726,
 	PLAN_2_CAPACITY_FEE: 5.0336, // per kW per month
-	PLAN_3_ENERGY_SHARE: 0.65, // 63% remains for the user
+	PLAN_3_ENERGY_SHARE: 0.63, // 63% remains for the user
 	BATTERY_COST_PER_KWH: 400,
 	BATTERY_RECUP_YEARS: 25,
 };
