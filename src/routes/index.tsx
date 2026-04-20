@@ -2,10 +2,11 @@
 /** biome-ignore-all lint/style/noNonNullAssertion: Just cause */
 /** biome-ignore-all lint/suspicious/noNonNullAssertedOptionalChain: Just cause */
 import {createFileRoute} from "@tanstack/react-router";
-import {AlertCircle, BarChart3, Battery, Calculator, Euro, Info, Percent, TrendingUp, Zap,} from "lucide-react";
-import {useEffect, useMemo, useState} from "react";
+import {AlertCircle, BarChart3, Battery, Calculator, Euro, Info, Percent, TrendingUp, Upload, Zap,} from "lucide-react";
+import {useEffect, useMemo, useRef, useState} from "react";
 import {fetchNordPoolPrices} from "../lib/api";
 import {ESO_PRICES, evaluatePlans, getBatteryRecommendation, type MonthlyInput,} from "../lib/calculator";
+import {importEsoZip, mergeEsoIntoInputs} from "../lib/eso-csv";
 import {cn} from "../lib/utils";
 
 export const Route = createFileRoute("/")({ component: App });
@@ -37,6 +38,9 @@ const DEFAULT_MONTHLY_INPUTS: MonthlyInput[] = MONTHS.map((month) => ({
 function App() {
 	const [isLoaded, setIsLoaded] = useState(false);
 	const [isLoadingPrices, setIsLoadingPrices] = useState(false);
+	const [isImportingEso, setIsImportingEso] = useState(false);
+	const [esoImportError, setEsoImportError] = useState<string | null>(null);
+	const esoFileInputRef = useRef<HTMLInputElement>(null);
 	const [batterySize, setBatterySize] = useState<number>(5);
 	const [vat, setVat] = useState<number>(21);
 	const [operatorCost, setOperatorCost] = useState<number>(0.136);
@@ -564,6 +568,57 @@ function App() {
 											<option value="2025">2025-2026</option>
 										</select>
 									</div>
+									<input
+										ref={esoFileInputRef}
+										type="file"
+										accept=".zip,.csv"
+										className="hidden"
+										onChange={async (e) => {
+											const file = e.target.files?.[0];
+											if (!file) return;
+											setIsImportingEso(true);
+											setEsoImportError(null);
+											try {
+												const rows = await importEsoZip(file);
+												setMonthlyInputs((prev) =>
+													mergeEsoIntoInputs(prev, rows),
+												);
+											} catch (err) {
+												setEsoImportError(
+													err instanceof Error ? err.message : "Import failed",
+												);
+												console.error("ESO import failed", err);
+											} finally {
+												setIsImportingEso(false);
+												if (esoFileInputRef.current)
+													esoFileInputRef.current.value = "";
+											}
+										}}
+									/>
+									<button
+										type="button"
+										disabled={isImportingEso}
+										onClick={() => esoFileInputRef.current?.click()}
+										className={cn(
+											"text-xs font-bold py-1 px-3 rounded-lg transition-colors flex items-center gap-1",
+											isImportingEso
+												? "bg-slate-200 text-slate-400 cursor-not-allowed"
+												: "bg-emerald-500 hover:bg-emerald-600 text-white",
+										)}
+										title="Upload the ZIP export from ESO self-service"
+									>
+										{isImportingEso ? (
+											<>
+												<div className="w-3 h-3 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+												Importing...
+											</>
+										) : (
+											<>
+												<Upload className="w-3 h-3" />
+												Import ESO ZIP
+											</>
+										)}
+									</button>
 									<button
 										type="button"
 										disabled={isLoadingPrices}
@@ -643,6 +698,12 @@ function App() {
 										)}
 									</button>
 								</div>
+								{esoImportError && (
+									<div className="flex items-center gap-2 self-end text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-1.5">
+										<AlertCircle className="w-3.5 h-3.5" />
+										<span>{esoImportError}</span>
+									</div>
+								)}
 							</div>
 							<div className="p-6">
 								<div className="overflow-x-auto">
