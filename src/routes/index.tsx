@@ -139,6 +139,7 @@ function App() {
 	}, [results]);
 
 	const savingsWithBattery = cheapestNoBattery - bestPlan.grandTotal;
+	const totalBatteryCost = batterySize * batteryCostPerKWh;
 
 	return (
 		<div className="min-h-screen bg-slate-50 text-slate-900 font-sans pb-20">
@@ -244,6 +245,11 @@ function App() {
 												{batterySize} kWh
 											</span>
 										</label>
+										{batterySize > 0 && (
+											<span className="text-xs font-bold text-slate-400">
+												Total: {totalBatteryCost.toFixed(0)}€
+											</span>
+										)}
 									</div>
 									<input
 										type="range"
@@ -735,14 +741,11 @@ function App() {
 										<p className="text-sm font-medium opacity-70 mb-1">
 											{rec.size} kWh
 										</p>
-										<p className="text-xl font-black mb-1">
+										<p className="text-xl font-black mb-4">
 											{rec.annualSaving.toFixed(0)}€
 											<span className="text-xs opacity-60 font-normal">
 												/yr
 											</span>
-										</p>
-										<p className="text-[10px] text-white/40 mb-4">
-											Total Cost: {rec.batteryCost.toFixed(0)}€
 										</p>
 
 										<div className="space-y-1">
@@ -753,6 +756,9 @@ function App() {
 												{rec.yearsToRecup === Infinity || rec.size === 0
 													? "No recoup"
 													: `${rec.yearsToRecup.toFixed(1)} years`}
+											</p>
+											<p className="text-[10px] text-white/40">
+												Total Cost: {rec.batteryCost.toFixed(0)}€
 											</p>
 										</div>
 
