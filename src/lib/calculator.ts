@@ -32,22 +32,47 @@ export interface PlanComparison {
 	reclaimPricePerKWh: number;
 }
 
+/**
+ * The three ESO settlement tariffs for prosumers. These are injected into the
+ * calculator so they can be sourced live from ESO (see lib/eso-tariffs.ts)
+ * while still falling back to the verified 2026 defaults below.
+ */
+export interface TariffRates {
+	reclaimFeePerKWh: number; // Plan I — paid per kWh reclaimed from storage
+	capacityFeePerKW: number; // Plan II — per allowed kW per month
+	energyShare: number; // Plan III — fraction of energy that remains for the user
+}
+
+export const DEFAULT_TARIFFS: TariffRates = {
+	reclaimFeePerKWh: 0.0726,
+	capacityFeePerKW: 5.0336,
+	energyShare: 0.63,
+};
+
 export const ESO_PRICES = {
-	PLAN_1_RECLAIM_FEE: 0.0726,
-	PLAN_2_CAPACITY_FEE: 5.0336, // per kW per month
-	PLAN_3_ENERGY_SHARE: 0.63, // 63% remains for the user
 	BATTERY_COST_PER_KWH: 400,
 	BATTERY_RECUP_YEARS: 25,
 };
+
+/** Battery sizes (kWh) offered in the comparison matrix. */
+export const SCAN_SIZES = [5, 10, 15, 20, 25] as const;
+
+export interface SizeRecommendation {
+	size: number;
+	annualSaving: number;
+	batteryCost: number;
+	yearsToRecup: number;
+}
 
 export function evaluatePlans(
 	inputs: MonthlyInput[],
 	batterySize: number,
 	capacityKW: number,
+	tariffs: TariffRates = DEFAULT_TARIFFS,
 ) {
 	// We evaluate each plan both WITH and WITHOUT battery
-	const resultsNoBattery = calculateResults(inputs, 0);
-	const resultsWithBattery = calculateResults(inputs, batterySize);
+	const resultsNoBattery = calculateResults(inputs, 0, tariffs);
+	const resultsWithBattery = calculateResults(inputs, batterySize, tariffs);
 
 	const totalTakenFromGrid = resultsWithBattery.reduce(
 		(acc, r) => acc + r.takenFromGridWithBattery,
@@ -64,33 +89,43 @@ export function evaluatePlans(
 
 	return {
 		noBattery: [
-			calculatePlanTotals(calculatePlanResults(inputs, 0, 1), 1, capacityKW),
-			calculatePlanTotals(calculatePlanResults(inputs, 0, 1), 2, capacityKW),
 			calculatePlanTotals(
-				calculatePlanResults(inputs, 0, ESO_PRICES.PLAN_3_ENERGY_SHARE),
+				calculatePlanResults(inputs, 0, 1, tariffs),
+				1,
+				capacityKW,
+				tariffs,
+			),
+			calculatePlanTotals(
+				calculatePlanResults(inputs, 0, 1, tariffs),
+				2,
+				capacityKW,
+				tariffs,
+			),
+			calculatePlanTotals(
+				calculatePlanResults(inputs, 0, tariffs.energyShare, tariffs),
 				3,
 				capacityKW,
+				tariffs,
 			),
 		],
 		withBattery: [
 			calculatePlanTotals(
-				calculatePlanResults(inputs, batterySize, 1),
+				calculatePlanResults(inputs, batterySize, 1, tariffs),
 				1,
 				capacityKW,
+				tariffs,
 			),
 			calculatePlanTotals(
-				calculatePlanResults(inputs, batterySize, 1),
+				calculatePlanResults(inputs, batterySize, 1, tariffs),
 				2,
 				capacityKW,
+				tariffs,
 			),
 			calculatePlanTotals(
-				calculatePlanResults(
-					inputs,
-					batterySize,
-					ESO_PRICES.PLAN_3_ENERGY_SHARE,
-				),
+				calculatePlanResults(inputs, batterySize, tariffs.energyShare, tariffs),
 				3,
 				capacityKW,
+				tariffs,
 			),
 		],
 		resultsWithBattery,
@@ -101,25 +136,20 @@ export function evaluatePlans(
 	};
 }
 
+/**
+ * Evaluates a fixed range of battery sizes so the user can compare which size
+ * pays back fastest. Each entry carries its annual saving versus no battery,
+ * upfront cost, and the resulting payback period in years.
+ */
 export function getBatteryRecommendation(
 	inputs: MonthlyInput[],
 	capacityKW: number,
-	selectedSize: number,
 	batteryCostPerKWh: number,
-) {
-	// Try different battery sizes to find optimal
-	const sizes = Array.from(
-		new Set([
-			0,
-			Math.max(0, selectedSize - 5),
-			selectedSize,
-			selectedSize + 5,
-			selectedSize + 10,
-		]),
-	).sort((a, b) => a - b);
-
+	tariffs: TariffRates = DEFAULT_TARIFFS,
+	sizes: readonly number[] = SCAN_SIZES,
+): SizeRecommendation[] {
 	return sizes.map((size) => {
-		const evalResult = evaluatePlans(inputs, size, capacityKW);
+		const evalResult = evaluatePlans(inputs, size, capacityKW, tariffs);
 		const bestPlanWithBattery = Math.min(
 			...evalResult.withBattery.map((p) => p.grandTotal),
 		);
@@ -135,9 +165,40 @@ export function getBatteryRecommendation(
 	});
 }
 
+/**
+ * Picks the size the user should actually buy: the largest battery that still
+ * pays back within the target window. Larger batteries save more in absolute
+ * terms (until coverage saturates), so the biggest one inside the target is the
+ * most worthwhile purchase. Returns null when no size pays back in time.
+ */
+export function pickRecommendedSize(
+	recommendations: SizeRecommendation[],
+	targetYears: number,
+): SizeRecommendation | null {
+	const affordable = recommendations.filter(
+		(rec) =>
+			rec.size > 0 &&
+			rec.annualSaving > 0 &&
+			Number.isFinite(rec.yearsToRecup) &&
+			rec.yearsToRecup <= targetYears,
+	);
+	if (affordable.length === 0) {
+		return null;
+	}
+
+	return affordable.reduce((best, rec) => {
+		if (rec.annualSaving > best.annualSaving + 1e-9) {
+			return rec;
+		}
+		const sameSaving = Math.abs(rec.annualSaving - best.annualSaving) < 1e-9;
+		return sameSaving && rec.size < best.size ? rec : best;
+	});
+}
+
 export function calculateResults(
 	inputs: MonthlyInput[],
 	batterySize: number,
+	tariffs: TariffRates = DEFAULT_TARIFFS,
 ): CalculationResult[] {
 	let accumulatedStorage = 0;
 
@@ -176,10 +237,10 @@ export function calculateResults(
 			storedInGrid: accumulatedStorage,
 			deficit,
 			reclaimedFromStorage: reclaimedFromStorage,
-			reclaimTotal: reclaimedFromStorage * ESO_PRICES.PLAN_1_RECLAIM_FEE,
+			reclaimTotal: reclaimedFromStorage * tariffs.reclaimFeePerKWh,
 			purchaseTotal: deficit * input.electricityPrice,
 			grandTotal:
-				reclaimedFromStorage * ESO_PRICES.PLAN_1_RECLAIM_FEE +
+				reclaimedFromStorage * tariffs.reclaimFeePerKWh +
 				deficit * input.electricityPrice,
 		};
 	});
@@ -189,6 +250,7 @@ export function calculatePlanResults(
 	inputs: MonthlyInput[],
 	batterySize: number,
 	energyShare: number,
+	tariffs: TariffRates = DEFAULT_TARIFFS,
 ): CalculationResult[] {
 	let accumulatedStorage = 0;
 
@@ -227,10 +289,10 @@ export function calculatePlanResults(
 			storedInGrid: accumulatedStorage,
 			deficit,
 			reclaimedFromStorage: reclaimedFromStorage,
-			reclaimTotal: reclaimedFromStorage * ESO_PRICES.PLAN_1_RECLAIM_FEE,
+			reclaimTotal: reclaimedFromStorage * tariffs.reclaimFeePerKWh,
 			purchaseTotal: deficit * input.electricityPrice,
 			grandTotal:
-				reclaimedFromStorage * ESO_PRICES.PLAN_1_RECLAIM_FEE +
+				reclaimedFromStorage * tariffs.reclaimFeePerKWh +
 				deficit * input.electricityPrice,
 		};
 	});
@@ -240,6 +302,7 @@ export function calculatePlanTotals(
 	results: CalculationResult[],
 	planType: 1 | 2 | 3,
 	capacityKW: number,
+	tariffs: TariffRates = DEFAULT_TARIFFS,
 ) {
 	// Total sent to grid in the scenario
 	const totalSent = results.reduce(
@@ -257,15 +320,14 @@ export function calculatePlanTotals(
 		const plan1: PlanComparison = {
 			planName: "Plan I",
 			planSubtitle: "Pay per kWh reclaimed",
-			reclaimCost: totalReclaimed * ESO_PRICES.PLAN_1_RECLAIM_FEE,
+			reclaimCost: totalReclaimed * tariffs.reclaimFeePerKWh,
 			purchaseCost: totalPurchaseCost,
 			capacityCost: 0,
-			grandTotal:
-				totalReclaimed * ESO_PRICES.PLAN_1_RECLAIM_FEE + totalPurchaseCost,
+			grandTotal: totalReclaimed * tariffs.reclaimFeePerKWh + totalPurchaseCost,
 			totalReclaimed: totalReclaimed,
 			totalDeficit: results.reduce((acc, r) => acc + r.deficit, 0),
 			totalStored: totalSent,
-			reclaimPricePerKWh: ESO_PRICES.PLAN_1_RECLAIM_FEE,
+			reclaimPricePerKWh: tariffs.reclaimFeePerKWh,
 		};
 		return plan1;
 	}
@@ -276,9 +338,9 @@ export function calculatePlanTotals(
 			planSubtitle: "Pay for capacity",
 			reclaimCost: 0,
 			purchaseCost: totalPurchaseCost,
-			capacityCost: ESO_PRICES.PLAN_2_CAPACITY_FEE * capacityKW * 12,
+			capacityCost: tariffs.capacityFeePerKW * capacityKW * 12,
 			grandTotal:
-				totalPurchaseCost + ESO_PRICES.PLAN_2_CAPACITY_FEE * capacityKW * 12,
+				totalPurchaseCost + tariffs.capacityFeePerKW * capacityKW * 12,
 			totalReclaimed: totalReclaimed,
 			totalDeficit: results.reduce((acc, r) => acc + r.deficit, 0),
 			totalStored: totalSent,
@@ -289,14 +351,14 @@ export function calculatePlanTotals(
 
 	const plan3: PlanComparison = {
 		planName: "Plan III",
-		planSubtitle: "Energy exchange 37%",
+		planSubtitle: `Energy exchange ${Math.round((1 - tariffs.energyShare) * 100)}%`,
 		reclaimCost: 0,
 		purchaseCost: totalPurchaseCost,
 		capacityCost: 0,
 		grandTotal: totalPurchaseCost,
 		totalReclaimed: totalReclaimed,
 		totalDeficit: results.reduce((acc, r) => acc + r.deficit, 0),
-		totalStored: totalSent * ESO_PRICES.PLAN_3_ENERGY_SHARE,
+		totalStored: totalSent * tariffs.energyShare,
 		reclaimPricePerKWh: 0,
 	};
 	return plan3;
