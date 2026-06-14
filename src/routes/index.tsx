@@ -20,6 +20,7 @@ import {
 	Upload,
 	Wallet,
 	Zap,
+	ExternalLinkIcon
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ElectricBackground from "../components/ElectricBackground";
@@ -593,7 +594,7 @@ function App() {
 					<Reveal delay={160}>
 						<SetupCard step={2} title={t.setupStep2Title}>
 							<p className="mb-4 text-sm text-(--ink-soft)">
-								{t.setupStep2Desc}
+								{t.setupStep2Desc} <a href="https://mano.eso.lt/consumption/history" target="_blank" rel="noopener noreferrer"><ExternalLinkIcon  className="size-3 inline" /></a>
 							</p>
 
 							<div className="flex flex-col gap-3 sm:flex-row">
