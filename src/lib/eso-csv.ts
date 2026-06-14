@@ -47,7 +47,7 @@ function parseCsvLine(line: string): string[] {
 	return fields;
 }
 
-export function parseEsoCsv(text: string): EsoMonthlyRow[] {
+function parseEsoCsv(text: string): EsoMonthlyRow[] {
 	const cleaned = text.replace(/^\uFEFF/, "");
 	const lines = cleaned.split(/\r?\n/).filter((l) => l.trim().length > 0);
 	if (lines.length < 2) return [];
@@ -94,7 +94,7 @@ export function parseEsoCsv(text: string): EsoMonthlyRow[] {
 	return Array.from(byMonth.values());
 }
 
-export async function extractCsvFromZip(file: File): Promise<string> {
+async function extractCsvFromZip(file: File): Promise<string> {
 	const zip = await JSZip.loadAsync(file);
 	const csvEntry = Object.values(zip.files).find(
 		(f) => !f.dir && /\.csv$/i.test(f.name),

@@ -1,27 +1,20 @@
 export interface MonthlyInput {
 	month: string;
-	sentToGrid: number; // Surplus electricity sent to grid from PV
-	takenFromGrid: number; // Taken from grid
-	electricityPrice: number; // Price for this month
+	sentToGrid: number; // Surplus PV electricity exported to the grid
+	takenFromGrid: number; // Electricity imported from the grid
+	electricityPrice: number; // €/kWh for this month
 }
 
-export interface CalculationResult {
-	month: string;
-	takenFromGrid: number;
+interface MonthlyResult {
 	coveredByBattery: number;
 	sentToGridWithBattery: number;
-	takenFromGridWithBattery: number;
-	storedInGrid: number;
-	deficit: number;
 	reclaimedFromStorage: number;
-	reclaimTotal: number;
+	deficit: number;
 	purchaseTotal: number;
-	grandTotal: number;
 }
 
-export interface PlanComparison {
+interface PlanComparison {
 	planName: string;
-	planSubtitle: string;
 	reclaimCost: number;
 	purchaseCost: number;
 	capacityCost: number;
@@ -29,13 +22,11 @@ export interface PlanComparison {
 	totalReclaimed: number;
 	totalDeficit: number;
 	totalStored: number;
-	reclaimPricePerKWh: number;
 }
 
 /**
- * The three ESO settlement tariffs for prosumers. These are injected into the
- * calculator so they can be sourced live from ESO (see lib/eso-tariffs.ts)
- * while still falling back to the verified 2026 defaults below.
+ * The three ESO settlement tariffs for prosumers. Sourced live from ESO when
+ * available (see lib/eso-tariffs.ts), falling back to the verified 2026 values.
  */
 export interface TariffRates {
 	reclaimFeePerKWh: number; // Plan I — paid per kWh reclaimed from storage
@@ -51,11 +42,10 @@ export const DEFAULT_TARIFFS: TariffRates = {
 
 export const ESO_PRICES = {
 	BATTERY_COST_PER_KWH: 400,
-	BATTERY_RECUP_YEARS: 25,
 };
 
 /** Battery sizes (kWh) offered in the comparison matrix. */
-export const SCAN_SIZES = [5, 10, 15, 20, 25] as const;
+const SCAN_SIZES = [5, 10, 15, 20, 25] as const;
 
 export interface SizeRecommendation {
 	size: number;
@@ -70,68 +60,30 @@ export function evaluatePlans(
 	capacityKW: number,
 	tariffs: TariffRates = DEFAULT_TARIFFS,
 ) {
-	// We evaluate each plan both WITH and WITHOUT battery
-	const resultsNoBattery = calculateResults(inputs, 0, tariffs);
-	const resultsWithBattery = calculateResults(inputs, batterySize, tariffs);
+	// Plans I and II settle the full stored surplus; Plan III only the share the
+	// prosumer retains. Battery coverage is independent of that share, so the
+	// full-share run also provides the kWh covered by the battery.
+	const noBatteryFull = simulateMonths(inputs, 0, 1);
+	const noBatteryShare = simulateMonths(inputs, 0, tariffs.energyShare);
+	const withBatteryFull = simulateMonths(inputs, batterySize, 1);
+	const withBatteryShare = simulateMonths(inputs, batterySize, tariffs.energyShare);
 
-	const totalTakenFromGrid = resultsWithBattery.reduce(
-		(acc, r) => acc + r.takenFromGridWithBattery,
-		0,
-	);
-	const totalSentToGrid = resultsWithBattery.reduce(
-		(acc, r) => acc + r.sentToGridWithBattery,
-		0,
-	);
-	const totalCoveredByBattery = resultsWithBattery.reduce(
+	const totalCoveredByBattery = withBatteryFull.reduce(
 		(acc, r) => acc + r.coveredByBattery,
 		0,
 	);
 
 	return {
 		noBattery: [
-			calculatePlanTotals(
-				calculatePlanResults(inputs, 0, 1, tariffs),
-				1,
-				capacityKW,
-				tariffs,
-			),
-			calculatePlanTotals(
-				calculatePlanResults(inputs, 0, 1, tariffs),
-				2,
-				capacityKW,
-				tariffs,
-			),
-			calculatePlanTotals(
-				calculatePlanResults(inputs, 0, tariffs.energyShare, tariffs),
-				3,
-				capacityKW,
-				tariffs,
-			),
+			summarizePlan(noBatteryFull, 1, capacityKW, tariffs),
+			summarizePlan(noBatteryFull, 2, capacityKW, tariffs),
+			summarizePlan(noBatteryShare, 3, capacityKW, tariffs),
 		],
 		withBattery: [
-			calculatePlanTotals(
-				calculatePlanResults(inputs, batterySize, 1, tariffs),
-				1,
-				capacityKW,
-				tariffs,
-			),
-			calculatePlanTotals(
-				calculatePlanResults(inputs, batterySize, 1, tariffs),
-				2,
-				capacityKW,
-				tariffs,
-			),
-			calculatePlanTotals(
-				calculatePlanResults(inputs, batterySize, tariffs.energyShare, tariffs),
-				3,
-				capacityKW,
-				tariffs,
-			),
+			summarizePlan(withBatteryFull, 1, capacityKW, tariffs),
+			summarizePlan(withBatteryFull, 2, capacityKW, tariffs),
+			summarizePlan(withBatteryShare, 3, capacityKW, tariffs),
 		],
-		resultsWithBattery,
-		resultsNoBattery,
-		totalTakenFromGrid,
-		totalSentToGrid,
 		totalCoveredByBattery,
 	};
 }
@@ -195,63 +147,17 @@ export function pickRecommendedSize(
 	});
 }
 
-export function calculateResults(
-	inputs: MonthlyInput[],
-	batterySize: number,
-	tariffs: TariffRates = DEFAULT_TARIFFS,
-): CalculationResult[] {
-	let accumulatedStorage = 0;
-
-	return inputs.map((input) => {
-		const coveredByBattery = calculateBatteryCoverage(
-			batterySize,
-			input.takenFromGrid,
-			input.sentToGrid,
-		);
-
-		const sentToGridWithBattery = Math.max(
-			0,
-			input.sentToGrid - coveredByBattery,
-		);
-		const takenFromGridWithBattery = Math.max(
-			0,
-			input.takenFromGrid - coveredByBattery,
-		);
-
-		accumulatedStorage += sentToGridWithBattery;
-
-		const reclaimedFromStorage = Math.min(
-			accumulatedStorage,
-			takenFromGridWithBattery,
-		);
-		accumulatedStorage -= reclaimedFromStorage;
-
-		const deficit = takenFromGridWithBattery - reclaimedFromStorage;
-
-		return {
-			month: input.month,
-			takenFromGrid: input.takenFromGrid,
-			coveredByBattery,
-			sentToGridWithBattery,
-			takenFromGridWithBattery,
-			storedInGrid: accumulatedStorage,
-			deficit,
-			reclaimedFromStorage: reclaimedFromStorage,
-			reclaimTotal: reclaimedFromStorage * tariffs.reclaimFeePerKWh,
-			purchaseTotal: deficit * input.electricityPrice,
-			grandTotal:
-				reclaimedFromStorage * tariffs.reclaimFeePerKWh +
-				deficit * input.electricityPrice,
-		};
-	});
-}
-
-export function calculatePlanResults(
+/**
+ * Walks the 12 months, charging the battery from monthly surplus and drawing it
+ * down against grid imports. `energyShare` is the fraction of exported surplus
+ * that returns as usable storage (1 for per-kWh/capacity plans, < 1 for the
+ * energy-exchange plan).
+ */
+function simulateMonths(
 	inputs: MonthlyInput[],
 	batterySize: number,
 	energyShare: number,
-	tariffs: TariffRates = DEFAULT_TARIFFS,
-): CalculationResult[] {
+): MonthlyResult[] {
 	let accumulatedStorage = 0;
 
 	return inputs.map((input) => {
@@ -271,7 +177,6 @@ export function calculatePlanResults(
 		);
 
 		accumulatedStorage += sentToGridWithBattery * energyShare;
-
 		const reclaimedFromStorage = Math.min(
 			accumulatedStorage,
 			takenFromGridWithBattery,
@@ -281,95 +186,75 @@ export function calculatePlanResults(
 		const deficit = takenFromGridWithBattery - reclaimedFromStorage;
 
 		return {
-			month: input.month,
-			takenFromGrid: input.takenFromGrid,
 			coveredByBattery,
 			sentToGridWithBattery,
-			takenFromGridWithBattery,
-			storedInGrid: accumulatedStorage,
+			reclaimedFromStorage,
 			deficit,
-			reclaimedFromStorage: reclaimedFromStorage,
-			reclaimTotal: reclaimedFromStorage * tariffs.reclaimFeePerKWh,
 			purchaseTotal: deficit * input.electricityPrice,
-			grandTotal:
-				reclaimedFromStorage * tariffs.reclaimFeePerKWh +
-				deficit * input.electricityPrice,
 		};
 	});
 }
 
-export function calculatePlanTotals(
-	results: CalculationResult[],
+function summarizePlan(
+	results: MonthlyResult[],
 	planType: 1 | 2 | 3,
 	capacityKW: number,
-	tariffs: TariffRates = DEFAULT_TARIFFS,
-) {
-	// Total sent to grid in the scenario
-	const totalSent = results.reduce(
-		(acc, r) => acc + r.sentToGridWithBattery,
+	tariffs: TariffRates,
+): PlanComparison {
+	const totalStored = results.reduce((acc, r) => acc + r.sentToGridWithBattery, 0);
+	const totalReclaimed = results.reduce(
+		(acc, r) => acc + r.reclaimedFromStorage,
 		0,
 	);
-	const totalReclaimed = results.reduce((acc, r) => {
-		return acc + r.reclaimedFromStorage;
-	}, 0);
-	const totalPurchaseCost = results.reduce((acc, r) => {
-		return acc + r.purchaseTotal;
-	}, 0);
+	const totalPurchaseCost = results.reduce((acc, r) => acc + r.purchaseTotal, 0);
+	const totalDeficit = results.reduce((acc, r) => acc + r.deficit, 0);
 
 	if (planType === 1) {
-		const plan1: PlanComparison = {
+		const reclaimCost = totalReclaimed * tariffs.reclaimFeePerKWh;
+		return {
 			planName: "Plan I",
-			planSubtitle: "Pay per kWh reclaimed",
-			reclaimCost: totalReclaimed * tariffs.reclaimFeePerKWh,
+			reclaimCost,
 			purchaseCost: totalPurchaseCost,
 			capacityCost: 0,
-			grandTotal: totalReclaimed * tariffs.reclaimFeePerKWh + totalPurchaseCost,
-			totalReclaimed: totalReclaimed,
-			totalDeficit: results.reduce((acc, r) => acc + r.deficit, 0),
-			totalStored: totalSent,
-			reclaimPricePerKWh: tariffs.reclaimFeePerKWh,
+			grandTotal: reclaimCost + totalPurchaseCost,
+			totalReclaimed,
+			totalDeficit,
+			totalStored,
 		};
-		return plan1;
 	}
 
 	if (planType === 2) {
-		const plan2: PlanComparison = {
+		const capacityCost = tariffs.capacityFeePerKW * capacityKW * 12;
+		return {
 			planName: "Plan II",
-			planSubtitle: "Pay for capacity",
 			reclaimCost: 0,
 			purchaseCost: totalPurchaseCost,
-			capacityCost: tariffs.capacityFeePerKW * capacityKW * 12,
-			grandTotal:
-				totalPurchaseCost + tariffs.capacityFeePerKW * capacityKW * 12,
-			totalReclaimed: totalReclaimed,
-			totalDeficit: results.reduce((acc, r) => acc + r.deficit, 0),
-			totalStored: totalSent,
-			reclaimPricePerKWh: 0,
+			capacityCost,
+			grandTotal: totalPurchaseCost + capacityCost,
+			totalReclaimed,
+			totalDeficit,
+			totalStored,
 		};
-		return plan2;
 	}
 
-	const plan3: PlanComparison = {
+	return {
 		planName: "Plan III",
-		planSubtitle: `Energy exchange ${Math.round((1 - tariffs.energyShare) * 100)}%`,
 		reclaimCost: 0,
 		purchaseCost: totalPurchaseCost,
 		capacityCost: 0,
 		grandTotal: totalPurchaseCost,
-		totalReclaimed: totalReclaimed,
-		totalDeficit: results.reduce((acc, r) => acc + r.deficit, 0),
-		totalStored: totalSent * tariffs.energyShare,
-		reclaimPricePerKWh: 0,
+		totalReclaimed,
+		totalDeficit,
+		totalStored: totalStored * tariffs.energyShare,
 	};
-	return plan3;
 }
 
-export function calculateBatteryCoverage(
+function calculateBatteryCoverage(
 	batterySize: number,
 	takenFromGrid: number,
 	sentToGrid: number,
 ) {
-	// Rough presumption: used from a battery during night, charged during day.
-	// Capacity * 30 is the max charge/discharge per month (one full cycle per day).
+	// Rough model: the battery charges from PV surplus by day and discharges at
+	// night. batterySize * 30 caps it at one full cycle per day across the month.
 	return Math.min(batterySize * 30, Math.min(takenFromGrid, sentToGrid));
 }

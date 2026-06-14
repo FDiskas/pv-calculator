@@ -6,7 +6,6 @@ interface RevealProps {
 	className?: string;
 	/** Stagger delay in milliseconds before the element animates in. */
 	delay?: number;
-	as?: "div" | "section" | "li";
 }
 
 /**
@@ -20,9 +19,8 @@ export default function Reveal({
 	children,
 	className,
 	delay = 0,
-	as = "div",
 }: RevealProps) {
-	const ref = useRef<HTMLElement>(null);
+	const ref = useRef<HTMLDivElement>(null);
 	const [visible, setVisible] = useState(false);
 
 	useEffect(() => {
@@ -50,16 +48,13 @@ export default function Reveal({
 		return () => observer.disconnect();
 	}, []);
 
-	const Tag = as;
-
 	return (
-		<Tag
-			// biome-ignore lint/suspicious/noExplicitAny: single ref shared across allowed tags
-			ref={ref as any}
+		<div
+			ref={ref}
 			className={cn("reveal", visible && "is-visible", className)}
 			style={{ "--reveal-delay": `${delay}ms` } as React.CSSProperties}
 		>
 			{children}
-		</Tag>
+		</div>
 	);
 }

@@ -20,7 +20,6 @@ import {
 	Upload,
 	Wallet,
 	Zap,
-	ExternalLinkIcon
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ElectricBackground from "../components/ElectricBackground";
@@ -38,6 +37,7 @@ import {
 } from "../lib/calculator";
 import { importEsoZip, mergeEsoIntoInputs } from "../lib/eso-csv";
 import {
+	ESO_TARIFFS_URL,
 	type EsoTariffResult,
 	fetchEsoTariffs,
 	TARIFFS_TTL_MS,
@@ -109,9 +109,8 @@ async function loadNordPoolBase(year: string): Promise<Record<string, number>> {
 	const json = await fetchNordPoolPrices({ data: { year } });
 	const base: Record<string, number> = {};
 	if (json.success && json.data.lt) {
-		const ltData: { timestamp: number; price: number }[] = json.data.lt;
 		const agg: Record<string, { sum: number; count: number }> = {};
-		for (const entry of ltData) {
+		for (const entry of json.data.lt) {
 			const month = new Date(entry.timestamp * 1000).toLocaleString("en-US", {
 				month: "long",
 			});
@@ -523,7 +522,7 @@ function App() {
 			<footer className="relative z-10 border-t border-(--line) py-10">
 				<div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-4 text-center text-sm text-(--ink-faint) sm:px-6 lg:px-8">
 					<a
-						href="https://www.eso.lt/namams/elektra/tarifu-planai-kainos-atsiskaitymas/gaminanciu-vartotoju-atsiskaitymo-budai-2026-metais/4829"
+						href={ESO_TARIFFS_URL}
 						target="_blank"
 						rel="noreferrer"
 						className="flex items-center gap-1.5 font-medium text-(--ink-soft) transition hover:text-(--elec-cyan)"
@@ -594,7 +593,14 @@ function App() {
 					<Reveal delay={160}>
 						<SetupCard step={2} title={t.setupStep2Title}>
 							<p className="mb-4 text-sm text-(--ink-soft)">
-								{t.setupStep2Desc} <a href="https://mano.eso.lt/consumption/history" target="_blank" rel="noopener noreferrer"><ExternalLinkIcon  className="size-3 inline" /></a>
+								{t.setupStep2Desc}{" "}
+								<a
+									href="https://mano.eso.lt/consumption/history"
+									target="_blank"
+									rel="noopener noreferrer"
+								>
+									<ExternalLink className="size-3 inline" />
+								</a>
 							</p>
 
 							<div className="flex flex-col gap-3 sm:flex-row">
