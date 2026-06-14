@@ -1,6 +1,7 @@
 import translations from "../locales/translations.json";
 
-export type LanguageCode = keyof (typeof translations)[keyof typeof translations];
+export type LanguageCode =
+	keyof (typeof translations)[keyof typeof translations];
 type PluralValue = { one: string; other: string };
 type Translate = {
 	[K in keyof typeof translations]: (typeof translations)[K][typeof DEFAULT_LANGUAGE] extends PluralValue
@@ -28,7 +29,9 @@ function createTranslationHelper(language: LanguageCode): Translate {
 		string | ((count: number) => string)
 	>;
 
-	for (const key of Object.keys(translations) as (keyof typeof translations)[]) {
+	for (const key of Object.keys(
+		translations,
+	) as (keyof typeof translations)[]) {
 		const baseValue = translations[key]?.[DEFAULT_LANGUAGE];
 		const value = translations[key]?.[language];
 

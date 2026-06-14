@@ -66,7 +66,11 @@ export function evaluatePlans(
 	const noBatteryFull = simulateMonths(inputs, 0, 1);
 	const noBatteryShare = simulateMonths(inputs, 0, tariffs.energyShare);
 	const withBatteryFull = simulateMonths(inputs, batterySize, 1);
-	const withBatteryShare = simulateMonths(inputs, batterySize, tariffs.energyShare);
+	const withBatteryShare = simulateMonths(
+		inputs,
+		batterySize,
+		tariffs.energyShare,
+	);
 
 	const totalCoveredByBattery = withBatteryFull.reduce(
 		(acc, r) => acc + r.coveredByBattery,
@@ -201,12 +205,18 @@ function summarizePlan(
 	capacityKW: number,
 	tariffs: TariffRates,
 ): PlanComparison {
-	const totalStored = results.reduce((acc, r) => acc + r.sentToGridWithBattery, 0);
+	const totalStored = results.reduce(
+		(acc, r) => acc + r.sentToGridWithBattery,
+		0,
+	);
 	const totalReclaimed = results.reduce(
 		(acc, r) => acc + r.reclaimedFromStorage,
 		0,
 	);
-	const totalPurchaseCost = results.reduce((acc, r) => acc + r.purchaseTotal, 0);
+	const totalPurchaseCost = results.reduce(
+		(acc, r) => acc + r.purchaseTotal,
+		0,
+	);
 	const totalDeficit = results.reduce((acc, r) => acc + r.deficit, 0);
 
 	if (planType === 1) {

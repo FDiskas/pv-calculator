@@ -9,11 +9,11 @@ import tailwindcss from "@tailwindcss/vite";
 const port = Number(process.env.PORT) || 3000;
 
 const config = defineConfig({
-  server: {
-    port,
-  },
-  resolve: { tsconfigPaths: true },
-  plugins: [devtools(), tailwindcss(), tanstackStart(), viteReact(), nitro()],
+	server: {
+		port,
+	},
+	resolve: { tsconfigPaths: true },
+	plugins: [devtools(), tailwindcss(), tanstackStart(), viteReact(), nitro()],
 });
 
 export default config;
