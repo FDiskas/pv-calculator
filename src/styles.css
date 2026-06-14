@@ -4,3 +4,420 @@
 @import 'tw-animate-css';
 
 @custom-variant dark (&:is(.dark *));
+
+/* ============================================================
+   Battery Investment Analysis — "Electricity" immersive theme
+   ============================================================ */
+
+:root {
+	color-scheme: dark;
+
+	/* Surfaces */
+	--bg-0: #05080f;
+	--bg-1: #0a1122;
+	--surface: rgba(17, 26, 46, 0.66);
+	--surface-2: rgba(13, 21, 38, 0.82);
+	--line: rgba(120, 165, 230, 0.16);
+	--line-strong: rgba(120, 165, 230, 0.34);
+
+	/* Ink */
+	--ink: #eaf1fc;
+	--ink-soft: #a3b4d2;
+	--ink-faint: #6a7b99;
+
+	/* Electric accents */
+	--elec-cyan: #2ad4ff;
+	--elec-blue: #3d7bff;
+	--elec-amber: #ffd23f;
+	--elec-violet: #a78bfa;
+	--elec-green: #36e2a4;
+	--elec-red: #ff6b82;
+}
+
+html {
+	scroll-behavior: smooth;
+}
+
+body {
+	background-color: var(--bg-0);
+	color: var(--ink);
+	-webkit-font-smoothing: antialiased;
+}
+
+/* ---------- Reusable surfaces ---------- */
+
+.glass {
+	background: var(--surface);
+	border: 1px solid var(--line);
+	backdrop-filter: blur(16px) saturate(140%);
+	-webkit-backdrop-filter: blur(16px) saturate(140%);
+}
+
+.glass-solid {
+	background: var(--surface-2);
+	border: 1px solid var(--line);
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
+}
+
+.hairline {
+	border-color: var(--line);
+}
+
+/* ---------- Glows ---------- */
+
+.glow-cyan {
+	box-shadow:
+		0 0 0 1px rgba(42, 212, 255, 0.35),
+		0 10px 50px -12px rgba(42, 212, 255, 0.45);
+}
+
+.glow-amber {
+	box-shadow:
+		0 0 0 1px rgba(255, 210, 63, 0.35),
+		0 10px 50px -12px rgba(255, 210, 63, 0.4);
+}
+
+.glow-green {
+	box-shadow:
+		0 0 0 1px rgba(54, 226, 164, 0.3),
+		0 10px 50px -14px rgba(54, 226, 164, 0.4);
+}
+
+/* ---------- Text effects ---------- */
+
+.text-gradient-elec {
+	background: linear-gradient(
+		100deg,
+		var(--elec-cyan) 0%,
+		#9fe8ff 30%,
+		var(--elec-violet) 65%,
+		var(--elec-amber) 100%
+	);
+	background-size: 220% auto;
+	-webkit-background-clip: text;
+	background-clip: text;
+	color: transparent;
+	animation: text-pan 9s ease-in-out infinite;
+}
+
+@keyframes text-pan {
+	0%,
+	100% {
+		background-position: 0% center;
+	}
+	50% {
+		background-position: 100% center;
+	}
+}
+
+/* ---------- Inputs ---------- */
+
+.field {
+	width: 100%;
+	background: rgba(8, 14, 27, 0.7);
+	border: 1px solid var(--line);
+	border-radius: 0.85rem;
+	color: var(--ink);
+	transition:
+		border-color 0.18s ease,
+		box-shadow 0.18s ease,
+		background 0.18s ease;
+}
+
+.field::placeholder {
+	color: var(--ink-faint);
+}
+
+.field:focus {
+	outline: none;
+	border-color: rgba(42, 212, 255, 0.7);
+	box-shadow: 0 0 0 3px rgba(42, 212, 255, 0.18);
+	background: rgba(10, 18, 34, 0.92);
+}
+
+.field-amber:focus {
+	border-color: rgba(255, 210, 63, 0.75);
+	box-shadow: 0 0 0 3px rgba(255, 210, 63, 0.16);
+}
+
+select.field option {
+	background: #0a1122;
+	color: var(--ink);
+}
+
+/* ---------- Electric range slider ---------- */
+
+.range-elec {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 100%;
+	height: 8px;
+	border-radius: 999px;
+	background: linear-gradient(
+		90deg,
+		var(--elec-cyan) 0%,
+		var(--elec-cyan) var(--fill, 25%),
+		rgba(120, 165, 230, 0.16) var(--fill, 25%),
+		rgba(120, 165, 230, 0.16) 100%
+	);
+	cursor: pointer;
+}
+
+.range-elec::-webkit-slider-thumb {
+	-webkit-appearance: none;
+	appearance: none;
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	background: radial-gradient(circle at 35% 35%, #ffffff, var(--elec-cyan) 65%);
+	border: 2px solid #eaf6ff;
+	box-shadow:
+		0 0 0 4px rgba(42, 212, 255, 0.22),
+		0 0 22px rgba(42, 212, 255, 0.75);
+	transition: transform 0.12s ease;
+}
+
+.range-elec::-webkit-slider-thumb:hover {
+	transform: scale(1.12);
+}
+
+.range-elec::-moz-range-thumb {
+	width: 22px;
+	height: 22px;
+	border-radius: 50%;
+	background: radial-gradient(circle at 35% 35%, #ffffff, var(--elec-cyan) 65%);
+	border: 2px solid #eaf6ff;
+	box-shadow:
+		0 0 0 4px rgba(42, 212, 255, 0.22),
+		0 0 22px rgba(42, 212, 255, 0.75);
+}
+
+/* ---------- Parallax background ---------- */
+
+.bg-stage {
+	position: fixed;
+	inset: 0;
+	z-index: 0;
+	overflow: hidden;
+	pointer-events: none;
+	background:
+		radial-gradient(
+			1200px 800px at 15% -10%,
+			rgba(61, 123, 255, 0.16),
+			transparent 60%
+		),
+		radial-gradient(
+			1000px 700px at 110% 10%,
+			rgba(167, 139, 250, 0.14),
+			transparent 55%
+		),
+		linear-gradient(180deg, var(--bg-1) 0%, var(--bg-0) 60%);
+}
+
+.parallax-layer {
+	position: absolute;
+	inset: -10% -10% -10% -10%;
+	will-change: transform;
+}
+
+.blob {
+	position: absolute;
+	border-radius: 50%;
+	filter: blur(80px);
+	opacity: 0.55;
+	animation: float-blob 14s ease-in-out infinite;
+}
+
+@keyframes float-blob {
+	0%,
+	100% {
+		transform: translate3d(0, 0, 0) scale(1);
+	}
+	50% {
+		transform: translate3d(0, -36px, 0) scale(1.08);
+	}
+}
+
+.grid-mesh {
+	position: absolute;
+	inset: -20%;
+	background-image:
+		linear-gradient(rgba(120, 165, 230, 0.08) 1px, transparent 1px),
+		linear-gradient(90deg, rgba(120, 165, 230, 0.08) 1px, transparent 1px);
+	background-size: 64px 64px;
+	mask-image: radial-gradient(ellipse 80% 60% at 50% 30%, #000 30%, transparent 75%);
+	-webkit-mask-image: radial-gradient(
+		ellipse 80% 60% at 50% 30%,
+		#000 30%,
+		transparent 75%
+	);
+	animation: grid-pan 26s linear infinite;
+}
+
+@keyframes grid-pan {
+	from {
+		background-position: 0 0;
+	}
+	to {
+		background-position: 64px 64px;
+	}
+}
+
+.bolt {
+	stroke: var(--elec-cyan);
+	filter: drop-shadow(0 0 6px rgba(42, 212, 255, 0.85));
+	animation: flicker 5s ease-in-out infinite;
+}
+
+.bolt-2 {
+	stroke: var(--elec-amber);
+	filter: drop-shadow(0 0 6px rgba(255, 210, 63, 0.85));
+	animation: flicker 7s ease-in-out infinite 1.5s;
+}
+
+@keyframes flicker {
+	0%,
+	100% {
+		opacity: 0.05;
+	}
+	48% {
+		opacity: 0.08;
+	}
+	50% {
+		opacity: 0.6;
+	}
+	52% {
+		opacity: 0.12;
+	}
+	54% {
+		opacity: 0.7;
+	}
+	58% {
+		opacity: 0.15;
+	}
+}
+
+.spark {
+	position: absolute;
+	width: 3px;
+	height: 3px;
+	border-radius: 50%;
+	background: var(--elec-cyan);
+	box-shadow: 0 0 8px 1px rgba(42, 212, 255, 0.9);
+	animation: spark-rise linear infinite;
+}
+
+@keyframes spark-rise {
+	0% {
+		transform: translateY(20px);
+		opacity: 0;
+	}
+	10% {
+		opacity: 0.9;
+	}
+	90% {
+		opacity: 0.7;
+	}
+	100% {
+		transform: translateY(-120px);
+		opacity: 0;
+	}
+}
+
+/* ---------- Scroll reveal ---------- */
+
+.reveal {
+	opacity: 0;
+	transform: translateY(26px);
+	transition:
+		opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+		transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+	transition-delay: var(--reveal-delay, 0ms);
+}
+
+.reveal.is-visible {
+	opacity: 1;
+	transform: none;
+}
+
+/* ---------- Micro-interactions ---------- */
+
+.lift {
+	transition:
+		transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+		border-color 0.22s ease,
+		box-shadow 0.22s ease;
+}
+
+.lift:hover {
+	transform: translateY(-4px);
+}
+
+.pulse-dot {
+	animation: pulse-dot 1.8s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+	0%,
+	100% {
+		opacity: 1;
+		box-shadow: 0 0 0 0 rgba(54, 226, 164, 0.55);
+	}
+	50% {
+		opacity: 0.7;
+		box-shadow: 0 0 0 6px rgba(54, 226, 164, 0);
+	}
+}
+
+.shimmer {
+	background: linear-gradient(
+		110deg,
+		transparent 25%,
+		rgba(42, 212, 255, 0.14) 50%,
+		transparent 75%
+	);
+	background-size: 200% 100%;
+	animation: shimmer 1.4s linear infinite;
+}
+
+@keyframes shimmer {
+	from {
+		background-position: 200% 0;
+	}
+	to {
+		background-position: -200% 0;
+	}
+}
+
+/* Battery fill bar inside the verdict gauge */
+.charge-fill {
+	background: linear-gradient(90deg, var(--elec-green), var(--elec-cyan));
+	box-shadow: 0 0 16px rgba(54, 226, 164, 0.5);
+	transition: width 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* ---------- Accessibility: honour reduced motion ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+	html {
+		scroll-behavior: auto;
+	}
+
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.001ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.001ms !important;
+	}
+
+	.reveal {
+		opacity: 1;
+		transform: none;
+	}
+
+	.parallax-layer {
+		transform: none !important;
+	}
+}
