@@ -1,0 +1,438 @@
+{
+  "headerTagline": {
+    "en": "Battery Investment Analysis",
+    "lt": "Baterijų investicijų analizė"
+  },
+  "navVerdict": {
+    "en": "Verdict",
+    "lt": "Verdiktas"
+  },
+  "navSizes": {
+    "en": "Sizes",
+    "lt": "Dydžiai"
+  },
+  "navPlans": {
+    "en": "Plans",
+    "lt": "Planai"
+  },
+  "editInputs": {
+    "en": "Edit inputs",
+    "lt": "Keisti duomenis"
+  },
+  "langLithuanian": {
+    "en": "Lithuanian",
+    "lt": "Lietuvių"
+  },
+  "langEnglish": {
+    "en": "English",
+    "lt": "Anglų"
+  },
+  "footerEsoGuide": {
+    "en": "ESO 2026 settlement guide",
+    "lt": "ESO 2026 atsiskaitymo gidas"
+  },
+  "footerTariffsLive": {
+    "en": "Tariffs parsed live from ESO",
+    "lt": "Tarifai nuskaityti tiesiogiai iš ESO"
+  },
+  "footerTariffsFallback": {
+    "en": "Using built-in 2026 ESO tariffs",
+    "lt": "Naudojami integruoti 2026 ESO tarifai"
+  },
+  "footerTariffDetail": {
+    "en": "· reclaim {reclaim}€/kWh · capacity {capacity}€/kW",
+    "lt": "· grąžinimas {reclaim}€/kWh · galia {capacity}€/kW"
+  },
+  "footerCopyright": {
+    "en": "© 2026 VoltInvest · Estimates based on VERT 2026 regulations",
+    "lt": "© 2026 VoltInvest · Skaičiavimai pagal VERT 2026 reglamentą"
+  },
+  "setupBadge": {
+    "en": "ESO 2026 · Lithuania",
+    "lt": "ESO 2026 · Lietuva"
+  },
+  "setupTitleHighlight": {
+    "en": "What battery",
+    "lt": "Kokią bateriją"
+  },
+  "setupTitleRest": {
+    "en": "should you buy?",
+    "lt": "verta pirkti?"
+  },
+  "setupSubtitle": {
+    "en": "Tell us about your solar setup. We'll size the battery that pays for itself fastest under the 2026 ESO tariffs — prices are pulled in automatically.",
+    "lt": "Papasakokite apie savo saulės elektrinę. Parinksime bateriją, kuri greičiausiai atsiperka pagal 2026 m. ESO tarifus — kainos įkeliamos automatiškai."
+  },
+  "setupStep1Title": {
+    "en": "Your solar system",
+    "lt": "Jūsų saulės elektrinė"
+  },
+  "fieldCapacity": {
+    "en": "Plant capacity (kW)",
+    "lt": "Elektrinės galia (kW)"
+  },
+  "setupStep2Title": {
+    "en": "Your energy use",
+    "lt": "Jūsų energijos suvartojimas"
+  },
+  "setupStep2Desc": {
+    "en": "Import the ZIP export from your ESO self-service account — the fastest, most accurate option — or enter the 12 months by hand.",
+    "lt": "Importuokite ZIP eksportą iš ESO savitarnos — greičiausias ir tiksliausias būdas — arba įveskite 12 mėnesių ranka."
+  },
+  "importButton": {
+    "en": "Import ESO ZIP",
+    "lt": "Importuoti ESO ZIP"
+  },
+  "importing": {
+    "en": "Importing…",
+    "lt": "Importuojama…"
+  },
+  "manualShow": {
+    "en": "Enter manually",
+    "lt": "Įvesti ranka"
+  },
+  "manualHide": {
+    "en": "Hide manual entry",
+    "lt": "Slėpti rankinį įvedimą"
+  },
+  "importSuccess": {
+    "en": "Imported — {sent} kWh sent, {taken} kWh taken across the year.",
+    "lt": "Importuota — {sent} kWh atiduota, {taken} kWh paimta per metus."
+  },
+  "setupStep3Title": {
+    "en": "Battery assumptions",
+    "lt": "Baterijos prielaidos"
+  },
+  "fieldBatteryCost": {
+    "en": "Battery cost (€/kWh)",
+    "lt": "Baterijos kaina (€/kWh)"
+  },
+  "fieldPayback": {
+    "en": "Acceptable payback (yrs)",
+    "lt": "Priimtinas atsipirkimas (m.)"
+  },
+  "analyzeButton": {
+    "en": "Analyze battery options",
+    "lt": "Analizuoti baterijų variantus"
+  },
+  "analyzeHint": {
+    "en": "Add your plant capacity and at least one month of energy data to continue.",
+    "lt": "Įveskite elektrinės galią ir bent vieno mėnesio duomenis, kad tęstumėte."
+  },
+  "resultsBadge": {
+    "en": "Your recommendation",
+    "lt": "Jūsų rekomendacija"
+  },
+  "recBuyPrefix": {
+    "en": "Buy a",
+    "lt": "Pirkite"
+  },
+  "recBuySuffix": {
+    "en": "battery",
+    "lt": "bateriją"
+  },
+  "recSubPre": {
+    "en": "It pays for itself in",
+    "lt": "Ji atsiperka per"
+  },
+  "recYears": {
+    "en": "{years} years",
+    "lt": "{years} m."
+  },
+  "recSubMid": {
+    "en": "and saves about",
+    "lt": "ir sutaupo apie"
+  },
+  "recPerYear": {
+    "en": "{amount}/year",
+    "lt": "{amount}/metus"
+  },
+  "recSubPost": {
+    "en": "— the largest battery that still recoups within your {target}-year target.",
+    "lt": "— didžiausia baterija, kuri atsiperka per jūsų {target} metų tikslą."
+  },
+  "noneTitlePre": {
+    "en": "A battery isn't worth it",
+    "lt": "Baterija dar"
+  },
+  "noneTitleHighlight": {
+    "en": "yet",
+    "lt": "neapsimoka"
+  },
+  "noneSub": {
+    "en": "At {price}€/kWh, no battery size recoups within your {target}-year target for this consumption profile. Try a longer target, a lower price, or explore the sizes below.",
+    "lt": "Esant {price}€/kWh kainai, joks baterijos dydis neatsiperka per jūsų {target} metų tikslą pagal šį suvartojimo profilį. Pabandykite ilgesnį tikslą, mažesnę kainą arba peržiūrėkite dydžius žemiau."
+  },
+  "statAnnualSavings": {
+    "en": "Annual savings",
+    "lt": "Metinis sutaupymas"
+  },
+  "statPaybackPeriod": {
+    "en": "Payback period",
+    "lt": "Atsipirkimo laikas"
+  },
+  "statCheapestPlan": {
+    "en": "Cheapest plan · {plan}",
+    "lt": "Pigiausias planas · {plan}"
+  },
+  "perYr": {
+    "en": "{amount}/yr",
+    "lt": "{amount}/m."
+  },
+  "yrs": {
+    "en": "{n} yrs",
+    "lt": "{n} m."
+  },
+  "verdictEyebrow": {
+    "en": "Explore",
+    "lt": "Tyrinėkite"
+  },
+  "verdictTitle": {
+    "en": "Fine-tune the battery size",
+    "lt": "Tiksliai parinkite baterijos dydį"
+  },
+  "verdictBatterySize": {
+    "en": "Battery size",
+    "lt": "Baterijos dydis"
+  },
+  "verdictSnap": {
+    "en": "Snap to recommended · {size} kWh",
+    "lt": "Naudoti rekomenduojamą · {size} kWh"
+  },
+  "verdictUpfront": {
+    "en": "Upfront cost",
+    "lt": "Pradinė kaina"
+  },
+  "badgeNoBattery": {
+    "en": "No battery",
+    "lt": "Be baterijos"
+  },
+  "badgeWorthwhile": {
+    "en": "Worthwhile",
+    "lt": "Apsimoka"
+  },
+  "badgeSlowPayback": {
+    "en": "Slow payback",
+    "lt": "Lėtas atsipirkimas"
+  },
+  "metricYearsUnit": {
+    "en": "years",
+    "lt": "metai"
+  },
+  "metricSaved": {
+    "en": "Saved per year",
+    "lt": "Sutaupoma per metus"
+  },
+  "metricVsNoBattery": {
+    "en": "vs no battery",
+    "lt": "lyginant be baterijos"
+  },
+  "metricCovered": {
+    "en": "Covered by battery",
+    "lt": "Padengta baterija"
+  },
+  "metricKwhPerYear": {
+    "en": "kWh / year",
+    "lt": "kWh / metus"
+  },
+  "verdictPaybackAgainst": {
+    "en": "Payback against your {target}-yr target",
+    "lt": "Atsipirkimas pagal jūsų {target} m. tikslą"
+  },
+  "verdictPaybackRatio": {
+    "en": "{n} / {target} yrs",
+    "lt": "{n} / {target} m."
+  },
+  "na": {
+    "en": "n/a",
+    "lt": "nėra"
+  },
+  "sizesEyebrow": {
+    "en": "Compare sizes",
+    "lt": "Palyginkite dydžius"
+  },
+  "sizesTitle": {
+    "en": "Savings & payback by battery size",
+    "lt": "Sutaupymas ir atsipirkimas pagal dydį"
+  },
+  "sizesBest": {
+    "en": "Best",
+    "lt": "Geriausia"
+  },
+  "sizesPayback": {
+    "en": "Payback",
+    "lt": "Atsipirkimas"
+  },
+  "sizesNoRecoup": {
+    "en": "No recoup",
+    "lt": "Neatsiperka"
+  },
+  "sizesUpfront": {
+    "en": "{amount} upfront",
+    "lt": "{amount} pradinė kaina"
+  },
+  "plansEyebrow": {
+    "en": "2026 ESO tariffs",
+    "lt": "2026 ESO tarifai"
+  },
+  "plansTitle": {
+    "en": "Tariff plan comparison",
+    "lt": "Tarifų planų palyginimas"
+  },
+  "plansWithBattery": {
+    "en": "with {size} kWh battery",
+    "lt": "su {size} kWh baterija"
+  },
+  "plansCheapest": {
+    "en": "Cheapest",
+    "lt": "Pigiausias"
+  },
+  "planReclaimFee": {
+    "en": "Reclaim fee",
+    "lt": "Grąžinimo mokestis"
+  },
+  "planPurchaseTotal": {
+    "en": "Purchase total",
+    "lt": "Pirkimo suma"
+  },
+  "planCapacityFee": {
+    "en": "Capacity fee",
+    "lt": "Galios mokestis"
+  },
+  "planStoredInGrid": {
+    "en": "Stored in grid",
+    "lt": "Saugoma tinkle"
+  },
+  "planReclaimed": {
+    "en": "Reclaimed",
+    "lt": "Atgauta"
+  },
+  "planDeficit": {
+    "en": "Deficit",
+    "lt": "Trūkumas"
+  },
+  "planIName": {
+    "en": "Plan I",
+    "lt": "I planas"
+  },
+  "planIIName": {
+    "en": "Plan II",
+    "lt": "II planas"
+  },
+  "planIIIName": {
+    "en": "Plan III",
+    "lt": "III planas"
+  },
+  "planISubtitle": {
+    "en": "Pay per kWh reclaimed",
+    "lt": "Mokestis už atgautą kWh"
+  },
+  "planIISubtitle": {
+    "en": "Pay for capacity",
+    "lt": "Mokestis už galią"
+  },
+  "planIIISubtitle": {
+    "en": "Energy exchange {percent}%",
+    "lt": "Energijos mainai {percent}%"
+  },
+  "dataTitle": {
+    "en": "Your monthly energy",
+    "lt": "Jūsų mėnesinė energija"
+  },
+  "dataMonth": {
+    "en": "Month",
+    "lt": "Mėnuo"
+  },
+  "dataTaken": {
+    "en": "Taken (kWh)",
+    "lt": "Paimta (kWh)"
+  },
+  "dataSent": {
+    "en": "Sent (kWh)",
+    "lt": "Atiduota (kWh)"
+  },
+  "dataPrice": {
+    "en": "Price €/kWh",
+    "lt": "Kaina €/kWh"
+  },
+  "priceAutoLoaded": {
+    "en": "Prices auto-loaded from NordPool",
+    "lt": "Kainos automatiškai įkeltos iš NordPool"
+  },
+  "priceVat": {
+    "en": "VAT",
+    "lt": "PVM"
+  },
+  "priceOperator": {
+    "en": "Operator €/kWh",
+    "lt": "Operatorius €/kWh"
+  },
+  "priceYearAria": {
+    "en": "NordPool price year",
+    "lt": "NordPool kainų metai"
+  },
+  "monthJanuary": {
+    "en": "January",
+    "lt": "Sausis"
+  },
+  "monthFebruary": {
+    "en": "February",
+    "lt": "Vasaris"
+  },
+  "monthMarch": {
+    "en": "March",
+    "lt": "Kovas"
+  },
+  "monthApril": {
+    "en": "April",
+    "lt": "Balandis"
+  },
+  "monthMay": {
+    "en": "May",
+    "lt": "Gegužė"
+  },
+  "monthJune": {
+    "en": "June",
+    "lt": "Birželis"
+  },
+  "monthJuly": {
+    "en": "July",
+    "lt": "Liepa"
+  },
+  "monthAugust": {
+    "en": "August",
+    "lt": "Rugpjūtis"
+  },
+  "monthSeptember": {
+    "en": "September",
+    "lt": "Rugsėjis"
+  },
+  "monthOctober": {
+    "en": "October",
+    "lt": "Spalis"
+  },
+  "monthNovember": {
+    "en": "November",
+    "lt": "Lapkritis"
+  },
+  "monthDecember": {
+    "en": "December",
+    "lt": "Gruodis"
+  },
+  "errCsvFormat": {
+    "en": "Unexpected CSV format — missing period, product code, or quantity column.",
+    "lt": "Netinkamas CSV formatas — trūksta laikotarpio, produkto kodo arba kiekio stulpelio."
+  },
+  "errNoCsv": {
+    "en": "No CSV file found inside the ZIP archive.",
+    "lt": "ZIP archyve nerasta CSV failo."
+  },
+  "errNoRows": {
+    "en": "No usable rows parsed from CSV.",
+    "lt": "Iš CSV nepavyko nuskaityti tinkamų eilučių."
+  },
+  "errImportFailed": {
+    "en": "Import failed",
+    "lt": "Importas nepavyko"
+  }
+}

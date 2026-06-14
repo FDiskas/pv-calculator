@@ -41,6 +41,11 @@ import {
 	fetchEsoTariffs,
 	TARIFFS_TTL_MS,
 } from "../lib/eso-tariffs";
+import {
+	LanguageSwitcher,
+	useLanguage,
+} from "../components/LanguageProvider";
+import { translate, withParams } from "../lib/translate";
 import { cn } from "../lib/utils";
 
 export const Route = createFileRoute("/")({ component: App });
@@ -121,6 +126,9 @@ async function loadNordPoolBase(year: string): Promise<Record<string, number>> {
 }
 
 function App() {
+	// Subscribe to language changes so every `translate.*` read below refreshes.
+	useLanguage();
+	const t = translate;
 	const [isLoaded, setIsLoaded] = useState(false);
 	const [showResults, setShowResults] = useState(false);
 	const [manualEntry, setManualEntry] = useState(false);
@@ -333,7 +341,7 @@ function App() {
 			setEsoImported(true);
 			setManualEntry(false);
 		} catch (err) {
-			setEsoImportError(err instanceof Error ? err.message : "Import failed");
+			setEsoImportError(err instanceof Error ? err.message : "");
 			console.error("ESO import failed", err);
 		} finally {
 			setIsImportingEso(false);
@@ -390,8 +398,54 @@ function App() {
 	const animatedCovered = useCountUp(results.totalCoveredByBattery);
 	const animatedRecSize = useCountUp(recommended ? recommended.size : 0);
 
+	/* ---- Localization helpers (months, plan labels, import errors) ---- */
+	const monthLabels: Record<string, string> = {
+		January: t.monthJanuary,
+		February: t.monthFebruary,
+		March: t.monthMarch,
+		April: t.monthApril,
+		May: t.monthMay,
+		June: t.monthJune,
+		July: t.monthJuly,
+		August: t.monthAugust,
+		September: t.monthSeptember,
+		October: t.monthOctober,
+		November: t.monthNovember,
+		December: t.monthDecember,
+	};
+	const monthLabel = (month: string) => monthLabels[month] ?? month;
+
+	const energyExchangePct = Math.round((1 - tariffs.energyShare) * 100);
+	const planDisplayName = (name: string) =>
+		name === "Plan I"
+			? t.planIName
+			: name === "Plan II"
+				? t.planIIName
+				: name === "Plan III"
+					? t.planIIIName
+					: name;
+	const planDisplaySubtitle = (name: string) =>
+		name === "Plan I"
+			? t.planISubtitle
+			: name === "Plan II"
+				? t.planIISubtitle
+				: withParams(t.planIIISubtitle, { percent: energyExchangePct });
+
+	const localizeError = (msg: string) => {
+		switch (msg) {
+			case "Unexpected CSV format — missing period, product code, or quantity column.":
+				return t.errCsvFormat;
+			case "No CSV file found inside the ZIP archive.":
+				return t.errNoCsv;
+			case "No usable rows parsed from CSV.":
+				return t.errNoRows;
+			default:
+				return t.errImportFailed;
+		}
+	};
+
 	return (
-		<div className="relative min-h-screen overflow-x-hidden font-sans text-[var(--ink)]">
+		<div className="relative min-h-screen overflow-x-hidden font-sans text-(--ink)">
 			<ElectricBackground />
 
 			{/* Hidden ESO file input — shared by every "Import ESO ZIP" trigger */}
@@ -407,47 +461,56 @@ function App() {
 			/>
 
 			{/* ---------------- Sticky nav ---------------- */}
-			<header className="glass sticky top-0 z-40 border-b border-[var(--line)]">
+			<header className="glass sticky top-0 z-40 border-b border-(--line)">
 				<div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6 lg:px-8">
 					<a href="#top" className="flex items-center gap-2.5">
-						<span className="relative grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-[var(--elec-cyan)] to-[var(--elec-blue)] glow-cyan">
+						<span className="relative grid h-9 w-9 place-items-center rounded-xl bg-linear-to-br from-(--elec-cyan) to-(--elec-blue) glow-cyan">
 							<Zap className="h-5 w-5 text-[#04101f]" fill="currentColor" />
 						</span>
 						<span className="text-[15px] font-bold tracking-tight">
-							Volt<span className="text-[var(--elec-cyan)]">Invest</span>
+							Volt<span className="text-(--elec-cyan)">Invest</span>
 						</span>
 					</a>
 
-					{showResults ? (
-						<div className="flex items-center gap-5">
-							<nav className="hidden items-center gap-6 text-sm font-medium text-[var(--ink-soft)] md:flex">
-								<a
-									className="transition hover:text-[var(--ink)]"
-									href="#verdict"
+					<div className="flex items-center gap-3">
+						{showResults ? (
+							<div className="flex items-center gap-5">
+								<nav className="hidden items-center gap-6 text-sm font-medium text-(--ink-soft) md:flex">
+									<a
+										className="transition hover:text-(--ink)"
+										href="#verdict"
+									>
+										{t.navVerdict}
+									</a>
+									<a
+										className="transition hover:text-(--ink)"
+										href="#sizes"
+									>
+										{t.navSizes}
+									</a>
+									<a
+										className="transition hover:text-(--ink)"
+										href="#plans"
+									>
+										{t.navPlans}
+									</a>
+								</nav>
+								<button
+									type="button"
+									onClick={goToSetup}
+									className="flex items-center gap-1.5 rounded-full border border-(--line-strong) bg-[rgba(8,14,27,0.6)] px-3.5 py-1.5 text-xs font-semibold transition hover:border-(--elec-cyan) hover:text-(--elec-cyan)"
 								>
-									Verdict
-								</a>
-								<a className="transition hover:text-[var(--ink)]" href="#sizes">
-									Sizes
-								</a>
-								<a className="transition hover:text-[var(--ink)]" href="#plans">
-									Plans
-								</a>
-							</nav>
-							<button
-								type="button"
-								onClick={goToSetup}
-								className="flex items-center gap-1.5 rounded-full border border-[var(--line-strong)] bg-[rgba(8,14,27,0.6)] px-3.5 py-1.5 text-xs font-semibold transition hover:border-[var(--elec-cyan)] hover:text-[var(--elec-cyan)]"
-							>
-								<SlidersHorizontal className="h-3.5 w-3.5" />
-								Edit inputs
-							</button>
-						</div>
-					) : (
-						<span className="text-xs font-medium text-[var(--ink-faint)]">
-							Battery Investment Analysis
-						</span>
-					)}
+									<SlidersHorizontal className="h-3.5 w-3.5" />
+									{t.editInputs}
+								</button>
+							</div>
+						) : (
+							<span className="text-xs font-medium text-(--ink-faint)">
+								{t.headerTagline}
+							</span>
+						)}
+						<LanguageSwitcher />
+					</div>
 				</div>
 			</header>
 
@@ -456,15 +519,15 @@ function App() {
 			</main>
 
 			{/* ---------------- Footer ---------------- */}
-			<footer className="relative z-10 border-t border-[var(--line)] py-10">
-				<div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-4 text-center text-sm text-[var(--ink-faint)] sm:px-6 lg:px-8">
+			<footer className="relative z-10 border-t border-(--line) py-10">
+				<div className="mx-auto flex max-w-6xl flex-col items-center gap-2 px-4 text-center text-sm text-(--ink-faint) sm:px-6 lg:px-8">
 					<a
 						href="https://www.eso.lt/namams/elektra/tarifu-planai-kainos-atsiskaitymas/gaminanciu-vartotoju-atsiskaitymo-budai-2026-metais/4829"
 						target="_blank"
 						rel="noreferrer"
-						className="flex items-center gap-1.5 font-medium text-[var(--ink-soft)] transition hover:text-[var(--elec-cyan)]"
+						className="flex items-center gap-1.5 font-medium text-(--ink-soft) transition hover:text-(--elec-cyan)"
 					>
-						ESO 2026 settlement guide
+						{t.footerEsoGuide}
 						<ExternalLink className="h-3.5 w-3.5" />
 					</a>
 					<p className="flex items-center gap-1.5">
@@ -472,17 +535,19 @@ function App() {
 							className={cn(
 								"h-1.5 w-1.5 rounded-full",
 								tariffSource === "live"
-									? "bg-[var(--elec-green)]"
-									: "bg-[var(--ink-faint)]",
+									? "bg-(--elec-green)"
+									: "bg-(--ink-faint)",
 							)}
 						/>
 						{tariffSource === "live"
-							? "Tariffs parsed live from ESO"
-							: "Using built-in 2026 ESO tariffs"}{" "}
-						· reclaim {tariffs.reclaimFeePerKWh}€/kWh · capacity{" "}
-						{tariffs.capacityFeePerKW}€/kW
+							? t.footerTariffsLive
+							: t.footerTariffsFallback}{" "}
+						{withParams(t.footerTariffDetail, {
+							reclaim: tariffs.reclaimFeePerKWh,
+							capacity: tariffs.capacityFeePerKW,
+						})}
 					</p>
-					<p>© 2026 VoltInvest · Estimates based on VERT 2026 regulations</p>
+					<p>{t.footerCopyright}</p>
 				</div>
 			</footer>
 		</div>
@@ -495,28 +560,26 @@ function App() {
 		return (
 			<div className="mx-auto max-w-3xl px-4 pb-20 pt-14 sm:px-6 lg:px-8 lg:pt-20">
 				<Reveal className="text-center">
-					<span className="inline-flex items-center gap-2 rounded-full border border-[var(--line-strong)] bg-[rgba(8,14,27,0.5)] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--elec-cyan)]">
+					<span className="inline-flex items-center gap-2 rounded-full border border-(--line-strong) bg-[rgba(8,14,27,0.5)] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-(--elec-cyan)">
 						<Sparkles className="h-3.5 w-3.5" />
-						ESO 2026 · Lithuania
+						{t.setupBadge}
 					</span>
 					<h1 className="mt-6 text-4xl font-black leading-[1.05] tracking-tight sm:text-5xl">
-						<span className="text-gradient-elec">What battery</span> should you
-						buy?
+						<span className="text-gradient-elec">{t.setupTitleHighlight}</span>{" "}
+						{t.setupTitleRest}
 					</h1>
-					<p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-[var(--ink-soft)]">
-						Tell us about your solar setup. We'll size the battery that pays for
-						itself fastest under the 2026 ESO tariffs — prices are pulled in
-						automatically.
+					<p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-(--ink-soft)">
+						{t.setupSubtitle}
 					</p>
 				</Reveal>
 
 				<div className="mt-10 space-y-5">
 					{/* Step 1 — system */}
 					<Reveal delay={80}>
-						<SetupCard step={1} title="Your solar system">
+						<SetupCard step={1} title={t.setupStep1Title}>
 							<div className="max-w-xs">
 								<Field
-									label="Plant capacity (kW)"
+									label={t.fieldCapacity}
 									value={capacityKW}
 									step="1"
 									onChange={setCapacityKW}
@@ -528,10 +591,9 @@ function App() {
 
 					{/* Step 2 — data */}
 					<Reveal delay={160}>
-						<SetupCard step={2} title="Your energy use">
-							<p className="mb-4 text-sm text-[var(--ink-soft)]">
-								Import the ZIP export from your ESO self-service account — the
-								fastest, most accurate option — or enter the 12 months by hand.
+						<SetupCard step={2} title={t.setupStep2Title}>
+							<p className="mb-4 text-sm text-(--ink-soft)">
+								{t.setupStep2Desc}
 							</p>
 
 							<div className="flex flex-col gap-3 sm:flex-row">
@@ -540,42 +602,44 @@ function App() {
 									disabled={isImportingEso}
 									onClick={() => esoFileInputRef.current?.click()}
 									className={cn(
-										"group flex flex-1 items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-r from-[var(--elec-cyan)] to-[var(--elec-blue)] px-6 py-3.5 text-sm font-bold text-[#04101f] transition glow-cyan hover:scale-[1.01]",
+										"group flex flex-1 items-center justify-center gap-2.5 rounded-2xl bg-linear-to-r from-(--elec-cyan) to-(--elec-blue) px-6 py-3.5 text-sm font-bold text-[#04101f] transition glow-cyan hover:scale-[1.01]",
 										isImportingEso && "cursor-not-allowed opacity-70",
 									)}
 								>
 									{isImportingEso ? (
 										<>
 											<span className="h-4 w-4 animate-spin rounded-full border-2 border-[#04101f]/40 border-t-[#04101f]" />
-											Importing…
+											{t.importing}
 										</>
 									) : (
 										<>
 											<Upload className="h-4 w-4" />
-											Import ESO ZIP
+											{t.importButton}
 										</>
 									)}
 								</button>
 								<button
 									type="button"
 									onClick={() => setManualEntry((v) => !v)}
-									className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-[var(--line-strong)] bg-[rgba(8,14,27,0.5)] px-6 py-3.5 text-sm font-semibold transition hover:border-[var(--elec-cyan)]"
+									className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-(--line-strong) bg-[rgba(8,14,27,0.5)] px-6 py-3.5 text-sm font-semibold transition hover:border-(--elec-cyan)"
 								>
-									{manualEntry ? "Hide manual entry" : "Enter manually"}
+									{manualEntry ? t.manualHide : t.manualShow}
 								</button>
 							</div>
 
 							{esoImported && !esoImportError && (
-								<p className="mt-3 flex items-center gap-1.5 text-xs font-medium text-[var(--elec-green)]">
+								<p className="mt-3 flex items-center gap-1.5 text-xs font-medium text-(--elec-green)">
 									<CheckCircle2 className="h-3.5 w-3.5" />
-									Imported — {euro(totals.sent)} kWh sent, {euro(totals.taken)}{" "}
-									kWh taken across the year.
+									{withParams(t.importSuccess, {
+										sent: euro(totals.sent),
+										taken: euro(totals.taken),
+									})}
 								</p>
 							)}
 							{esoImportError && (
-								<p className="mt-3 flex items-center gap-1.5 text-xs font-medium text-[var(--elec-red)]">
+								<p className="mt-3 flex items-center gap-1.5 text-xs font-medium text-(--elec-red)">
 									<AlertCircle className="h-3.5 w-3.5" />
-									{esoImportError}
+									{localizeError(esoImportError)}
 								</p>
 							)}
 
@@ -589,16 +653,16 @@ function App() {
 
 					{/* Step 3 — assumptions */}
 					<Reveal delay={240}>
-						<SetupCard step={3} title="Battery assumptions">
+						<SetupCard step={3} title={t.setupStep3Title}>
 							<div className="grid grid-cols-2 gap-4">
 								<Field
-									label="Battery cost (€/kWh)"
+									label={t.fieldBatteryCost}
 									value={batteryCostPerKWh}
 									step="1"
 									onChange={setBatteryCostPerKWh}
 								/>
 								<Field
-									label="Acceptable payback (yrs)"
+									label={t.fieldPayback}
 									value={batteryRecupYears}
 									step="1"
 									onChange={setBatteryRecupYears}
@@ -615,18 +679,17 @@ function App() {
 							className={cn(
 								"group flex w-full items-center justify-center gap-2.5 rounded-2xl px-7 py-4 text-base font-bold transition",
 								hasData
-									? "bg-gradient-to-r from-[var(--elec-cyan)] to-[var(--elec-blue)] text-[#04101f] glow-cyan hover:scale-[1.01]"
-									: "cursor-not-allowed border border-[var(--line)] bg-[rgba(8,14,27,0.5)] text-[var(--ink-faint)]",
+									? "bg-linear-to-r from-(--elec-cyan) to-(--elec-blue) text-[#04101f] glow-cyan hover:scale-[1.01]"
+									: "cursor-not-allowed border border-(--line) bg-[rgba(8,14,27,0.5)] text-(--ink-faint)",
 							)}
 						>
 							<BatteryCharging className="h-5 w-5" />
-							Analyze battery options
+							{t.analyzeButton}
 							<ArrowRight className="h-4 w-4 transition group-hover:translate-x-1" />
 						</button>
 						{!hasData && (
-							<p className="mt-3 text-center text-xs text-[var(--ink-faint)]">
-								Add your plant capacity and at least one month of energy data to
-								continue.
+							<p className="mt-3 text-center text-xs text-(--ink-faint)">
+								{t.analyzeHint}
 							</p>
 						)}
 					</Reveal>
@@ -644,43 +707,48 @@ function App() {
 				{/* Recommendation hero */}
 				<section className="mx-auto max-w-6xl px-4 pb-8 pt-14 sm:px-6 lg:px-8 lg:pt-20">
 					<Reveal className="text-center">
-						<span className="inline-flex items-center gap-2 rounded-full border border-[var(--line-strong)] bg-[rgba(8,14,27,0.5)] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--elec-cyan)]">
+						<span className="inline-flex items-center gap-2 rounded-full border border-(--line-strong) bg-[rgba(8,14,27,0.5)] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.18em] text-(--elec-cyan)">
 							<Sparkles className="h-3.5 w-3.5" />
-							Your recommendation
+							{t.resultsBadge}
 						</span>
 						{recommended ? (
 							<>
 								<h1 className="mt-6 text-4xl font-black leading-[1.05] tracking-tight sm:text-6xl">
-									Buy a{" "}
+									{t.recBuyPrefix}{" "}
 									<span className="text-gradient-elec">
 										{Math.round(animatedRecSize)} kWh
 									</span>{" "}
-									battery
+									{t.recBuySuffix}
 								</h1>
-								<p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-[var(--ink-soft)] sm:text-lg">
-									It pays for itself in{" "}
-									<strong className="text-[var(--ink)]">
-										{recommended.yearsToRecup.toFixed(1)} years
+								<p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-(--ink-soft) sm:text-lg">
+									{t.recSubPre}{" "}
+									<strong className="text-(--ink)">
+										{withParams(t.recYears, {
+											years: recommended.yearsToRecup.toFixed(1),
+										})}
 									</strong>{" "}
-									and saves about{" "}
-									<strong className="text-[var(--elec-green)]">
-										{euro(recommended.annualSaving)}/year
+									{t.recSubMid}{" "}
+									<strong className="text-(--elec-green)">
+										{withParams(t.recPerYear, {
+											amount: euro(recommended.annualSaving),
+										})}
 									</strong>{" "}
-									— the largest battery that still recoups within your{" "}
-									{batteryRecupYears}-year target.
+									{withParams(t.recSubPost, { target: batteryRecupYears })}
 								</p>
 							</>
 						) : (
 							<>
 								<h1 className="mt-6 text-3xl font-black leading-tight tracking-tight sm:text-5xl">
-									A battery isn't worth it{" "}
-									<span className="text-gradient-elec">yet</span>
+									{t.noneTitlePre}{" "}
+									<span className="text-gradient-elec">
+										{t.noneTitleHighlight}
+									</span>
 								</h1>
-								<p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-[var(--ink-soft)]">
-									At {batteryCostPerKWh}€/kWh, no battery size recoups within
-									your {batteryRecupYears}-year target for this consumption
-									profile. Try a longer target, a lower price, or explore the
-									sizes below.
+								<p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-(--ink-soft)">
+									{withParams(t.noneSub, {
+										price: batteryCostPerKWh,
+										target: batteryRecupYears,
+									})}
 								</p>
 							</>
 						)}
@@ -693,24 +761,26 @@ function App() {
 						<StatChip
 							icon={<PiggyBank className="h-5 w-5" />}
 							accent="green"
-							label="Annual savings"
-							value={`${euro(animatedSavings)}/yr`}
+							label={t.statAnnualSavings}
+							value={withParams(t.perYr, { amount: euro(animatedSavings) })}
 						/>
 						<StatChip
 							icon={<Clock className="h-5 w-5" />}
 							accent="amber"
-							label="Payback period"
+							label={t.statPaybackPeriod}
 							value={
 								Number.isFinite(paybackYears)
-									? `${animatedPayback.toFixed(1)} yrs`
+									? withParams(t.yrs, { n: animatedPayback.toFixed(1) })
 									: "—"
 							}
 						/>
 						<StatChip
 							icon={<TrendingUp className="h-5 w-5" />}
 							accent="cyan"
-							label={`Cheapest plan · ${bestPlan.planName}`}
-							value={`${euro(bestPlan.grandTotal)}/yr`}
+							label={withParams(t.statCheapestPlan, {
+								plan: planDisplayName(bestPlan.planName),
+							})}
+							value={withParams(t.perYr, { amount: euro(bestPlan.grandTotal) })}
 						/>
 					</Reveal>
 				</section>
@@ -723,20 +793,20 @@ function App() {
 					<Reveal>
 						<SectionHeading
 							icon={<BatteryCharging className="h-5 w-5" />}
-							eyebrow="Explore"
-							title="Fine-tune the battery size"
+							eyebrow={t.verdictEyebrow}
+							title={t.verdictTitle}
 						/>
 					</Reveal>
 					<div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
 						<Reveal className="lg:col-span-2" delay={80}>
 							<div className="glass h-full rounded-3xl p-6 sm:p-7">
 								<div className="flex items-baseline justify-between">
-									<label className="text-sm font-semibold text-[var(--ink-soft)]">
-										Battery size
+									<label className="text-sm font-semibold text-(--ink-soft)">
+										{t.verdictBatterySize}
 									</label>
-									<span className="text-3xl font-black text-[var(--elec-cyan)]">
+									<span className="text-3xl font-black text-(--elec-cyan)">
 										{batterySize}
-										<span className="ml-1 text-sm font-medium text-[var(--ink-faint)]">
+										<span className="ml-1 text-sm font-medium text-(--ink-faint)">
 											kWh
 										</span>
 									</span>
@@ -755,7 +825,7 @@ function App() {
 										} as React.CSSProperties
 									}
 								/>
-								<div className="mt-2 flex justify-between text-[10px] text-[var(--ink-faint)]">
+								<div className="mt-2 flex justify-between text-[10px] text-(--ink-faint)">
 									<span>0</span>
 									<span>20 kWh</span>
 									<span>40 kWh</span>
@@ -764,16 +834,16 @@ function App() {
 									<button
 										type="button"
 										onClick={() => setBatterySize(recommended.size)}
-										className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl border border-[rgba(54,226,164,0.4)] px-3 py-2 text-xs font-semibold text-[var(--elec-green)] transition hover:bg-[rgba(54,226,164,0.08)]"
+										className="mt-4 flex w-full items-center justify-center gap-1.5 rounded-xl border border-[rgba(54,226,164,0.4)] px-3 py-2 text-xs font-semibold text-(--elec-green) transition hover:bg-[rgba(54,226,164,0.08)]"
 									>
 										<Sparkles className="h-3.5 w-3.5" />
-										Snap to recommended · {recommended.size} kWh
+										{withParams(t.verdictSnap, { size: recommended.size })}
 									</button>
 								)}
 								{hasBattery && (
-									<p className="mt-4 text-xs text-[var(--ink-soft)]">
-										Upfront cost{" "}
-										<span className="font-bold text-[var(--ink)]">
+									<p className="mt-4 text-xs text-(--ink-soft)">
+										{t.verdictUpfront}{" "}
+										<span className="font-bold text-(--ink)">
 											{euro(totalBatteryCost)}
 										</span>
 									</p>
@@ -787,7 +857,7 @@ function App() {
 									"relative h-full overflow-hidden rounded-3xl border p-6 sm:p-8",
 									isGoodInvestment
 										? "border-[rgba(54,226,164,0.35)] glow-green"
-										: "glass border-[var(--line)]",
+										: "glass border-(--line)",
 								)}
 								style={{
 									background: isGoodInvestment
@@ -799,23 +869,23 @@ function App() {
 									className={cn(
 										"inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wider",
 										!hasBattery
-											? "bg-[rgba(120,165,230,0.12)] text-[var(--ink-soft)]"
+											? "bg-[rgba(120,165,230,0.12)] text-(--ink-soft)"
 											: isGoodInvestment
-												? "bg-[var(--elec-green)] text-[#04101f]"
-												: "bg-[rgba(255,107,130,0.15)] text-[var(--elec-red)]",
+												? "bg-(--elec-green) text-[#04101f]"
+												: "bg-[rgba(255,107,130,0.15)] text-(--elec-red)",
 									)}
 								>
 									{!hasBattery ? (
 										<>
-											<Info className="h-3.5 w-3.5" /> No battery
+											<Info className="h-3.5 w-3.5" /> {t.badgeNoBattery}
 										</>
 									) : isGoodInvestment ? (
 										<>
-											<CheckCircle2 className="h-3.5 w-3.5" /> Worthwhile
+											<CheckCircle2 className="h-3.5 w-3.5" /> {t.badgeWorthwhile}
 										</>
 									) : (
 										<>
-											<AlertCircle className="h-3.5 w-3.5" /> Slow payback
+											<AlertCircle className="h-3.5 w-3.5" /> {t.badgeSlowPayback}
 										</>
 									)}
 								</span>
@@ -823,47 +893,52 @@ function App() {
 								<div className="mt-7 grid grid-cols-1 gap-6 sm:grid-cols-3">
 									<Metric
 										icon={<Clock className="h-4 w-4" />}
-										label="Payback period"
+										label={t.statPaybackPeriod}
 										value={
 											Number.isFinite(paybackYears)
 												? animatedPayback.toFixed(1)
 												: "—"
 										}
-										unit={Number.isFinite(paybackYears) ? "years" : ""}
+										unit={Number.isFinite(paybackYears) ? t.metricYearsUnit : ""}
 										accent="amber"
 									/>
 									<Metric
 										icon={<PiggyBank className="h-4 w-4" />}
-										label="Saved per year"
+										label={t.metricSaved}
 										value={euro(animatedSavings)}
-										unit="vs no battery"
+										unit={t.metricVsNoBattery}
 										accent="green"
 									/>
 									<Metric
 										icon={<Activity className="h-4 w-4" />}
-										label="Covered by battery"
+										label={t.metricCovered}
 										value={`${Math.round(animatedCovered)}`}
-										unit="kWh / year"
+										unit={t.metricKwhPerYear}
 										accent="cyan"
 									/>
 								</div>
 
 								<div className="mt-8">
-									<div className="mb-2 flex justify-between text-xs font-medium text-[var(--ink-soft)]">
+									<div className="mb-2 flex justify-between text-xs font-medium text-(--ink-soft)">
 										<span>
-											Payback against your {batteryRecupYears}-yr target
+											{withParams(t.verdictPaybackAgainst, {
+												target: batteryRecupYears,
+											})}
 										</span>
 										<span
 											className={cn(
 												"font-bold",
 												isGoodInvestment
-													? "text-[var(--elec-green)]"
-													: "text-[var(--elec-red)]",
+													? "text-(--elec-green)"
+													: "text-(--elec-red)",
 											)}
 										>
 											{Number.isFinite(paybackYears)
-												? `${paybackYears.toFixed(1)} / ${batteryRecupYears} yrs`
-												: "n/a"}
+												? withParams(t.verdictPaybackRatio, {
+														n: paybackYears.toFixed(1),
+														target: batteryRecupYears,
+													})
+												: t.na}
 										</span>
 									</div>
 									<div className="h-2.5 w-full overflow-hidden rounded-full bg-[rgba(120,165,230,0.14)]">
@@ -872,7 +947,7 @@ function App() {
 												"charge-fill h-full rounded-full",
 												!isGoodInvestment &&
 													hasBattery &&
-													"!bg-[var(--elec-red)] !shadow-none",
+													"bg-(--elec-red)! shadow-none!",
 											)}
 											style={{ width: `${hasBattery ? paybackFill : 0}%` }}
 										/>
@@ -891,8 +966,8 @@ function App() {
 					<Reveal>
 						<SectionHeading
 							icon={<Layers className="h-5 w-5" />}
-							eyebrow="Compare sizes"
-							title="Savings & payback by battery size"
+							eyebrow={t.sizesEyebrow}
+							title={t.sizesTitle}
 						/>
 					</Reveal>
 					<div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-5">
@@ -907,10 +982,10 @@ function App() {
 										className={cn(
 											"lift w-full rounded-2xl border p-5 text-left",
 											isSelected
-												? "border-[var(--elec-cyan)] glow-cyan"
+												? "border-(--elec-cyan) glow-cyan"
 												: isRecommended
 													? "border-[rgba(54,226,164,0.4)]"
-													: "glass hover:border-[var(--line-strong)]",
+													: "glass hover:border-(--line-strong)",
 										)}
 										style={
 											isSelected
@@ -922,40 +997,42 @@ function App() {
 										}
 									>
 										<div className="flex items-center justify-between">
-											<span className="text-sm font-semibold text-[var(--ink-soft)]">
+											<span className="text-sm font-semibold text-(--ink-soft)">
 												{rec.size} kWh
 											</span>
 											{isRecommended && (
-												<span className="rounded-full bg-[var(--elec-green)] px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-[#04101f]">
-													Best
+												<span className="rounded-full bg-(--elec-green) px-2 py-0.5 text-[9px] font-black uppercase tracking-wider text-[#04101f]">
+													{t.sizesBest}
 												</span>
 											)}
 										</div>
-										<p className="mt-3 text-2xl font-black text-[var(--ink)]">
+										<p className="mt-3 text-2xl font-black text-(--ink)">
 											{euro(rec.annualSaving)}
-											<span className="text-xs font-medium text-[var(--ink-faint)]">
+											<span className="text-xs font-medium text-(--ink-faint)">
 												/yr
 											</span>
 										</p>
-										<div className="mt-4 border-t border-[var(--line)] pt-3">
-											<p className="text-[10px] uppercase tracking-wider text-[var(--ink-faint)]">
-												Payback
+										<div className="mt-4 border-t border-(--line) pt-3">
+											<p className="text-[10px] uppercase tracking-wider text-(--ink-faint)">
+												{t.sizesPayback}
 											</p>
 											<p
 												className={cn(
 													"text-sm font-bold",
 													rec.yearsToRecup <= batteryRecupYears &&
 														Number.isFinite(rec.yearsToRecup)
-														? "text-[var(--elec-green)]"
-														: "text-[var(--ink)]",
+														? "text-(--elec-green)"
+														: "text-(--ink)",
 												)}
 											>
 												{Number.isFinite(rec.yearsToRecup)
-													? `${rec.yearsToRecup.toFixed(1)} yrs`
-													: "No recoup"}
+													? withParams(t.yrs, { n: rec.yearsToRecup.toFixed(1) })
+													: t.sizesNoRecoup}
 											</p>
-											<p className="mt-1 text-[10px] text-[var(--ink-faint)]">
-												{euro(rec.batteryCost)} upfront
+											<p className="mt-1 text-[10px] text-(--ink-faint)">
+												{withParams(t.sizesUpfront, {
+													amount: euro(rec.batteryCost),
+												})}
 											</p>
 										</div>
 									</button>
@@ -973,13 +1050,13 @@ function App() {
 					<Reveal>
 						<SectionHeading
 							icon={<Wallet className="h-5 w-5" />}
-							eyebrow="2026 ESO tariffs"
-							title="Tariff plan comparison"
+							eyebrow={t.plansEyebrow}
+							title={t.plansTitle}
 							trailing={
 								hasBattery ? (
-									<span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line-strong)] px-3 py-1 text-xs font-medium text-[var(--elec-cyan)]">
-										<span className="pulse-dot h-1.5 w-1.5 rounded-full bg-[var(--elec-cyan)]" />
-										with {batterySize} kWh battery
+									<span className="inline-flex items-center gap-1.5 rounded-full border border-(--line-strong) px-3 py-1 text-xs font-medium text-(--elec-cyan)">
+										<span className="pulse-dot h-1.5 w-1.5 rounded-full bg-(--elec-cyan)" />
+										{withParams(t.plansWithBattery, { size: batterySize })}
 									</span>
 								) : null
 							}
@@ -994,7 +1071,7 @@ function App() {
 										className={cn(
 											"lift relative flex h-full flex-col rounded-3xl border p-6",
 											isBest
-												? "border-[var(--elec-amber)] glow-amber"
+												? "border-(--elec-amber) glow-amber"
 												: "glass",
 										)}
 										style={
@@ -1007,53 +1084,53 @@ function App() {
 										}
 									>
 										{isBest && (
-											<span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-[var(--elec-amber)] px-3 py-1 text-[10px] font-black uppercase tracking-widest text-[#04101f]">
-												Cheapest
+											<span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-(--elec-amber) px-3 py-1 text-[10px] font-black uppercase tracking-widest text-[#04101f]">
+												{t.plansCheapest}
 											</span>
 										)}
 										<div className="mb-5">
-											<h3 className="font-bold text-[var(--ink)]">
-												{plan.planName}
+											<h3 className="font-bold text-(--ink)">
+												{planDisplayName(plan.planName)}
 											</h3>
-											<p className="text-xs text-[var(--ink-faint)]">
-												{plan.planSubtitle}
+											<p className="text-xs text-(--ink-faint)">
+												{planDisplaySubtitle(plan.planName)}
 											</p>
 											<div className="mt-2 flex items-baseline gap-1">
-												<span className="text-3xl font-black text-[var(--ink)]">
+												<span className="text-3xl font-black text-(--ink)">
 													{plan.grandTotal.toFixed(2)}€
 												</span>
-												<span className="text-sm text-[var(--ink-faint)]">
+												<span className="text-sm text-(--ink-faint)">
 													/yr
 												</span>
 											</div>
 										</div>
 										<dl className="grow space-y-2.5 text-sm">
 											<PlanRow
-												label="Reclaim fee"
+												label={t.planReclaimFee}
 												value={`${plan.reclaimCost.toFixed(2)}€`}
 											/>
 											<PlanRow
-												label="Purchase total"
+												label={t.planPurchaseTotal}
 												value={`${plan.purchaseCost.toFixed(2)}€`}
 											/>
 											<PlanRow
-												label="Capacity fee"
+												label={t.planCapacityFee}
 												value={`${plan.capacityCost.toFixed(2)}€`}
 											/>
-											<div className="!mt-3 border-t border-[var(--line)] pt-3">
+											<div className="mt-3! border-t border-(--line) pt-3">
 												<PlanRow
 													muted
-													label="Stored in grid"
+													label={t.planStoredInGrid}
 													value={`${plan.totalStored.toFixed(0)} kWh`}
 												/>
 												<PlanRow
 													muted
-													label="Reclaimed"
+													label={t.planReclaimed}
 													value={`${plan.totalReclaimed.toFixed(0)} kWh`}
 												/>
 												<PlanRow
 													muted
-													label="Deficit"
+													label={t.planDeficit}
 													value={`${plan.totalDeficit.toFixed(0)} kWh`}
 												/>
 											</div>
@@ -1071,16 +1148,16 @@ function App() {
 						<div className="glass rounded-3xl p-6">
 							<div className="mb-5 flex items-center justify-between">
 								<h2 className="flex items-center gap-2 text-lg font-bold">
-									<Gauge className="h-5 w-5 text-[var(--elec-cyan)]" />
-									Your monthly energy
+									<Gauge className="h-5 w-5 text-(--elec-cyan)" />
+									{t.dataTitle}
 								</h2>
 								<button
 									type="button"
 									onClick={goToSetup}
-									className="flex items-center gap-1.5 rounded-xl border border-[var(--line-strong)] px-3.5 py-2 text-xs font-semibold transition hover:border-[var(--elec-cyan)] hover:text-[var(--elec-cyan)]"
+									className="flex items-center gap-1.5 rounded-xl border border-(--line-strong) px-3.5 py-2 text-xs font-semibold transition hover:border-(--elec-cyan) hover:text-(--elec-cyan)"
 								>
 									<SlidersHorizontal className="h-3.5 w-3.5" />
-									Edit inputs
+									{t.editInputs}
 								</button>
 							</div>
 							{renderDataTable()}
@@ -1095,27 +1172,27 @@ function App() {
 	/* ---- Shared: NordPool price status + year picker ---- */
 	function PriceStatus() {
 		return (
-			<div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-[var(--line)] pt-4 text-xs text-[var(--ink-soft)]">
+			<div className="mt-5 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-(--line) pt-4 text-xs text-(--ink-soft)">
 				<span className="flex items-center gap-1.5">
 					{isLoadingPrices ? (
-						<span className="h-3 w-3 animate-spin rounded-full border-2 border-[var(--ink-faint)] border-t-[var(--elec-amber)]" />
+						<span className="h-3 w-3 animate-spin rounded-full border-2 border-(--ink-faint) border-t-(--elec-amber)" />
 					) : (
-						<TrendingUp className="h-3.5 w-3.5 text-[var(--elec-amber)]" />
+						<TrendingUp className="h-3.5 w-3.5 text-(--elec-amber)" />
 					)}
-					Prices auto-loaded from NordPool
+					{t.priceAutoLoaded}
 				</span>
 				<select
 					value={nordPoolYear}
 					onChange={(e) => setNordPoolYear(e.target.value)}
 					className="field field-amber px-2.5 py-1"
-					aria-label="NordPool price year"
+					aria-label={t.priceYearAria}
 				>
 					<option value="2024">2024–2025</option>
 					<option value="2025">2025–2026</option>
 				</select>
 				<span className="flex items-center gap-1.5">
 					<Percent className="h-3 w-3" />
-					VAT
+					{t.priceVat}
 					<input
 						type="number"
 						value={vat}
@@ -1125,7 +1202,7 @@ function App() {
 				</span>
 				<span className="flex items-center gap-1.5">
 					<Euro className="h-3 w-3" />
-					Operator €/kWh
+					{t.priceOperator}
 					<input
 						type="number"
 						step="0.001"
@@ -1142,23 +1219,23 @@ function App() {
 	function renderDataTable() {
 		return (
 			<div className="overflow-x-auto">
-				<table className="w-full min-w-[460px] text-sm">
+				<table className="w-full min-w-115 text-sm">
 					<thead>
-						<tr className="text-left text-xs uppercase tracking-wider text-[var(--ink-faint)]">
-							<th className="px-3 pb-3 font-medium">Month</th>
-							<th className="px-3 pb-3 font-medium">Taken (kWh)</th>
-							<th className="px-3 pb-3 font-medium">Sent (kWh)</th>
-							<th className="px-3 pb-3 font-medium">Price €/kWh</th>
+						<tr className="text-left text-xs uppercase tracking-wider text-(--ink-faint)">
+							<th className="px-3 pb-3 font-medium">{t.dataMonth}</th>
+							<th className="px-3 pb-3 font-medium">{t.dataTaken}</th>
+							<th className="px-3 pb-3 font-medium">{t.dataSent}</th>
+							<th className="px-3 pb-3 font-medium">{t.dataPrice}</th>
 						</tr>
 					</thead>
 					<tbody>
 						{monthlyInputs.map((input, idx) => (
 							<tr
 								key={input.month}
-								className="border-t border-[var(--line)] transition hover:bg-[rgba(42,212,255,0.04)]"
+								className="border-t border-(--line) transition hover:bg-[rgba(42,212,255,0.04)]"
 							>
-								<td className="px-3 py-2.5 font-medium text-[var(--ink-soft)]">
-									{input.month}
+								<td className="px-3 py-2.5 font-medium text-(--ink-soft)">
+									{monthLabel(input.month)}
 								</td>
 								<td className="px-3 py-2.5">
 									<input
@@ -1180,7 +1257,7 @@ function App() {
 										className="field w-24 px-2.5 py-1.5 tabular-nums"
 									/>
 								</td>
-								<td className="px-3 py-2.5 tabular-nums text-[var(--elec-amber)]">
+								<td className="px-3 py-2.5 tabular-nums text-(--elec-amber)">
 									{priceByMonth[input.month] != null
 										? priceByMonth[input.month].toFixed(3)
 										: "—"}
@@ -1218,7 +1295,7 @@ function SetupCard({
 	return (
 		<div className="glass rounded-3xl p-6 sm:p-7">
 			<div className="mb-5 flex items-center gap-3">
-				<span className="grid h-7 w-7 place-items-center rounded-full border border-[var(--line-strong)] text-xs font-black text-[var(--elec-cyan)]">
+				<span className="grid h-7 w-7 place-items-center rounded-full border border-(--line-strong) text-xs font-black text-[var(--elec-cyan)]">
 					{step}
 				</span>
 				<h2 className="text-lg font-bold">{title}</h2>
@@ -1251,8 +1328,8 @@ function StatChip({
 				{icon}
 			</span>
 			<div>
-				<p className="text-xs text-[var(--ink-faint)]">{label}</p>
-				<p className="text-xl font-black tabular-nums text-[var(--ink)]">
+				<p className="text-xs text-(--ink-faint)">{label}</p>
+				<p className="text-xl font-black tabular-nums text-(--ink)">
 					{value}
 				</p>
 			</div>
@@ -1274,7 +1351,7 @@ function SectionHeading({
 	return (
 		<div className="mb-7 flex flex-wrap items-end justify-between gap-3">
 			<div>
-				<p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-[var(--elec-cyan)]">
+				<p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-(--elec-cyan)">
 					{icon}
 					{eyebrow}
 				</p>
@@ -1309,10 +1386,10 @@ function Metric({
 				{icon}
 				{label}
 			</p>
-			<p className="mt-1.5 text-3xl font-black tabular-nums text-[var(--ink)]">
+			<p className="mt-1.5 text-3xl font-black tabular-nums text-(--ink)">
 				{value}
 			</p>
-			{unit && <p className="text-xs text-[var(--ink-faint)]">{unit}</p>}
+			{unit && <p className="text-xs text-(--ink-faint)">{unit}</p>}
 		</div>
 	);
 }
@@ -1331,8 +1408,8 @@ function PlanRow({
 			<dt
 				className={cn(
 					muted
-						? "text-[11px] uppercase tracking-wide text-[var(--ink-faint)]"
-						: "text-[var(--ink-soft)]",
+						? "text-[11px] uppercase tracking-wide text-(--ink-faint)"
+						: "text-(--ink-soft)",
 				)}
 			>
 				{label}
@@ -1340,7 +1417,7 @@ function PlanRow({
 			<dd
 				className={cn(
 					"font-semibold tabular-nums",
-					muted ? "text-xs text-[var(--ink-faint)]" : "text-[var(--ink)]",
+					muted ? "text-xs text-(--ink-faint)" : "text-(--ink)",
 				)}
 			>
 				{value}
@@ -1364,12 +1441,12 @@ function Field({
 }) {
 	return (
 		<div>
-			<label className="mb-1.5 block text-xs font-medium text-[var(--ink-soft)]">
+			<label className="mb-1.5 block text-xs font-medium text-(--ink-soft)">
 				{label}
 			</label>
 			<div className="relative">
 				{icon && (
-					<span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--ink-faint)]">
+					<span className="absolute left-3 top-1/2 -translate-y-1/2 text-(--ink-faint)">
 						{icon}
 					</span>
 				)}

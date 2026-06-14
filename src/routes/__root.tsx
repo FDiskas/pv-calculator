@@ -3,6 +3,7 @@ import {createRootRoute, HeadContent, Scripts} from "@tanstack/react-router";
 import {TanStackRouterDevtoolsPanel} from "@tanstack/react-router-devtools";
 import Footer from "../components/Footer";
 import Header from "../components/Header";
+import { LanguageProvider } from "../components/LanguageProvider";
 
 import appCss from "../styles.css?url";
 
@@ -34,16 +35,18 @@ export const Route = createRootRoute({
 
 function RootDocument({ children }: { children: React.ReactNode }) {
 	return (
-		<html lang="en" suppressHydrationWarning>
+		<html lang="lt" suppressHydrationWarning>
 			<head>
 				{/** biome-ignore lint/security/noDangerouslySetInnerHtml: One time exception here */}
 				<script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
 				<HeadContent />
 			</head>
 			<body className="font-sans antialiased">
-				<Header />
-				{children}
-				<Footer />
+				<LanguageProvider>
+					<Header />
+					{children}
+					<Footer />
+				</LanguageProvider>
 				<TanStackDevtools
 					config={{
 						position: "bottom-right",
